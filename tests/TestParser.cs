@@ -1,4 +1,4 @@
-using kdl_net;
+﻿using kdl_net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,7 @@ namespace kdl_net_tests
     [TestClass]
     public class TestParser
     {
+#pragma warning disable IDE0022, IDE1006, IDE0051
         static readonly KDLParser parser = new KDLParser();
         static KDLDocument doc() => KDLDocument.Empty;
         static KDLDocument doc(params KDLNode[] nodes) => new KDLDocument(nodes);
@@ -19,13 +20,23 @@ namespace kdl_net_tests
 
         static KDLNode node(string ident) => new KDLNode(ident);
         static KDLNode node(string ident, params KDLNode[] nodes) => new KDLNode(ident, child: doc(nodes));
+
         static KDLNode node(string ident, Dictionary<string, object> props)
-            => new KDLNode(ident, props: props.ToDictionary(
-                keySelector: (kv) => kv.Key,
-                elementSelector: (kv) => KDLValue.From(kv.Value)));
+            => node(ident, args: new List<object>(0), props: props);
+
+        static KDLNode node(string ident, List<object> args, Dictionary<string, object> props)
+            => new KDLNode(
+                ident, 
+                args: args.Select(a => KDLValue.From(a)).ToList(),
+                props: props.ToDictionary(
+                    keySelector: (kv) => kv.Key,
+                    elementSelector: (kv) => KDLValue.From(kv.Value)),
+                child: null);
 
         static KDLNode node(string ident, List<object> args, params KDLNode[] nodes)
-            => new KDLNode(ident, args: args.Select(a => KDLValue.From(a)).ToList(), child: doc(nodes));
+            => new KDLNode(ident, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
+
+#pragma warning restore
 
         [TestMethod]
         public void ParseEmptyString()
@@ -36,7 +47,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void Nodes()
+        public void ParseNodes()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse("node"));
             Assert.AreEqual(doc(node("node")), parser.Parse("node\n"));
@@ -45,7 +56,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void node()
+        public void ParseNode()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse("node;"));
             Assert.AreEqual(doc(node("node", list(1))), parser.Parse("node 1"));
@@ -54,7 +65,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void slashDashComment()
+        public void ParseSlashDashComment()
         {
             Assert.AreEqual(doc(), parser.Parse("/-node"));
             Assert.AreEqual(doc(), parser.Parse("/- node"));
@@ -66,7 +77,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void argSlashdashComment()
+        public void ParseArgSlashdashComment()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse("node /-1"));
             Assert.AreEqual(doc(node("node", list(2))), parser.Parse("node /-1 2"));
@@ -77,7 +88,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void prop_slashdash_comment()
+        public void ParseProp_slashdash_comment()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse("node /-key=1"));
             Assert.AreEqual(doc(node("node")), parser.Parse("node /- key=1"));
@@ -85,7 +96,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void childrenSlashdashComment()
+        public void ParseChildrenSlashdashComment()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse("node /-{}"));
             Assert.AreEqual(doc(node("node")), parser.Parse("node /- {}"));
@@ -104,8 +115,8 @@ namespace kdl_net_tests
                 parser.Parse("node \"\\\"\\\\\\/\\b\\f\\n\\r\\t\""));
             Assert.AreEqual(doc(node("node", list("\u0010"))), parser.Parse("node \"\\u{10}\""));
 
-            //    assertThat(()->parser.parse("node \"\\i\""), throwsException(KDLParseException.class));
-            //assertThat(() -> parser.parse("node \"\\u{c0ffee}\""), throwsException(KDLParseException.class));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node \"\\i\""));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node \"\\u{c0ffee}\""));
         }
 
         //    [TestMethod]
@@ -117,39 +128,39 @@ namespace kdl_net_tests
         //        Assert.AreEqual(doc(node("node", list(1.0))), parser.Parse("node +1.0"));
         //        Assert.AreEqual(doc(node("node", list(1.0e10))), parser.Parse("node 1.0e10"));
         //        Assert.AreEqual(doc(node("node", list(1.0e-10))), parser.Parse("node 1.0e-10"));
-        //        assertThat(parser.parse("node 123_456_789.0"),
+        //        assertThat(parser.Parse("node 123_456_789.0"),
         //                equalTo(doc(node("node", list(new BigDecimal("123456789.0"))))));
 
-        //        assertThat(()->parser.parse("node 123_456_789.0_"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node ?1.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node _1.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node .0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1.0E100E10"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1.0E1.10"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1.0.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1.0.0E7"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1.E7"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1._0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.parse("node 1."), throwsException(KDLParseException.class));
+        //        Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 123_456_789.0_"));
+        //        assertThat(() -> parser.Parse("node ?1.0"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node _1.0"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node .0"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1.0E100E10"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1.0E1.10"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1.0.0"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1.0.0E7"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1.E7"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1._0"), throwsException(KDLParseException.class));
+        //        assertThat(() -> parser.Parse("node 1."), throwsException(KDLParseException.class));
         //    }
 
-        //[TestMethod]
-        //    public void integer()
-        //{
-        //    Assert.AreEqual(doc(node("node", list(0))), parser.Parse("node 0"));
-        //    Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123456789"));
-        //    Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123_456_789"));
-        //    Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123_456_789_"));
-        //    Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node +0123456789"));
-        //    Assert.AreEqual(doc(node("node", list(-123456789))), parser.Parse("node -0123456789"));
+        [TestMethod]
+        public void ParseInteger()
+        {
+            Assert.AreEqual(doc(node("node", list(0))), parser.Parse("node 0"));
+            Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123456789"));
+            Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123_456_789"));
+            Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node 0123_456_789_"));
+            Assert.AreEqual(doc(node("node", list(123456789))), parser.Parse("node +0123456789"));
+            Assert.AreEqual(doc(node("node", list(-123456789))), parser.Parse("node -0123456789"));
 
-        //    assertThat(()->parser.parse("node ?0123456789"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node _0123456789"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node a"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node --"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0x"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0x_1"), throwsException(KDLParseException.class));
-        //    }
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node ?0123456789"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node _0123456789"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node a"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node --"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x_1"));
+        }
 
         //    [TestMethod]
         //    public void hexadecimal()
@@ -160,9 +171,9 @@ namespace kdl_net_tests
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef"));
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef_"));
 
-        //    assertThat(()->parser.parse("node 0x_123"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0xg"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0xx"), throwsException(KDLParseException.class));
+        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x_123"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xg"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xx"));
         //    }
 
         //    [TestMethod]
@@ -174,9 +185,9 @@ namespace kdl_net_tests
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o0123_4567"));
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567_"));
 
-        //    assertThat(()->parser.parse("node 0o_123"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0o8"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0oo"), throwsException(KDLParseException.class));
+        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o_123"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o8"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0oo"));
         //    }
 
         //    [TestMethod]
@@ -189,13 +200,13 @@ namespace kdl_net_tests
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01___10"));
         //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110_"));
 
-        //    assertThat(()->parser.parse("node 0b_0110"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0b20"), throwsException(KDLParseException.class));
-        //assertThat(()->parser.parse("node 0bb"), throwsException(KDLParseException.class));
+        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b_0110"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b20"));
+        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0bb"));
         //    }
 
         [TestMethod]
-        public void raw_string()
+        public void ParseRaw_string()
         {
             Assert.AreEqual(doc(node("node", list("foo"))), parser.Parse("node r\"foo\""));
             Assert.AreEqual(doc(node("node", list("foo\\nbar"))), parser.Parse("node r\"foo\\nbar\""));
@@ -204,18 +215,18 @@ namespace kdl_net_tests
             Assert.AreEqual(doc(node("node", list("\\nfoo\\r"))), parser.Parse("node r\"\\nfoo\\r\""));
             Assert.AreEqual(doc(node("node", list("hello\"world"))), parser.Parse("node r#\"hello\"world\"#"));
 
-            //assertThat(()->parser.parse("node r##\"foo\"#"), throwsException(KDLParseException.class));
+            //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node r##\"foo\"#"));
         }
 
         [TestMethod]
-        public void boolean()
+        public void ParseBoolean()
         {
             Assert.AreEqual(doc(node("node", list(true))), parser.Parse("node true"));
             Assert.AreEqual(doc(node("node", list(false))), parser.Parse("node false"));
         }
 
         [TestMethod]
-        public void node_space()
+        public void ParseNode_space()
         {
             Assert.AreEqual(doc(node("node", list(1))), parser.Parse("node 1"));
             Assert.AreEqual(doc(node("node", list(1))), parser.Parse("node\t1"));
@@ -224,7 +235,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void single_line_comment()
+        public void ParseSingle_line_comment()
         {
             Assert.AreEqual(doc(), parser.Parse("//hello"));
             Assert.AreEqual(doc(), parser.Parse("// \thello"));
@@ -236,7 +247,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void multi_line_comment()
+        public void ParseMulti_line_comment()
         {
             Assert.AreEqual(doc(), parser.Parse("/*hello*/"));
             Assert.AreEqual(doc(), parser.Parse("/*hello*/\n"));
@@ -247,7 +258,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void escline()
+        public void ParseEscline()
         {
             Assert.AreEqual(doc(node("foo")), parser.Parse("\\\nfoo"));
             Assert.AreEqual(doc(node("foo")), parser.Parse("\\\n    foo"));
@@ -257,7 +268,7 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void whitespace()
+        public void ParseWhitespace()
         {
             Assert.AreEqual(doc(node("node")), parser.Parse(" node"));
             Assert.AreEqual(doc(node("node")), parser.Parse("\tnode"));
@@ -265,12 +276,113 @@ namespace kdl_net_tests
         }
 
         [TestMethod]
-        public void newline()
+        public void ParseNewline()
         {
             Assert.AreEqual(doc(node("node1"), node("node2")), parser.Parse("node1\nnode2"));
             Assert.AreEqual(doc(node("node1"), node("node2")), parser.Parse("node1\rnode2"));
             Assert.AreEqual(doc(node("node1"), node("node2")), parser.Parse("node1\r\nnode2"));
             Assert.AreEqual(doc(node("node1"), node("node2")), parser.Parse("node1\n\nnode2"));
+        }
+
+        [TestMethod]
+        public void ParseNestedChildNodes()
+        {
+            KDLDocument actual = parser.Parse(
+                "content { \n" +
+                        "    section \"First section\" {\n" +
+                        "        paragraph \"This is the first paragraph\"\n" +
+                        "        paragraph \"This is the second paragraph\"\n" +
+                        "    }\n" +
+                        "}"
+            );
+
+            KDLDocument expected = doc(
+                    node("content",
+                            node("section", list("First section"),
+                                    node("paragraph", list("This is the first paragraph")),
+                                    node("paragraph", list("This is the second paragraph"))
+                            )
+                    )
+            );
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void ParseSemicolon()
+        {
+            Assert.AreEqual(doc(node("node1"), node("node2"), node("node3")), parser.Parse("node1; node2; node3"));
+            Assert.AreEqual(doc(node("node1", node("node2")), node("node3")), parser.Parse("node1 { node2; }; node3"));
+        }
+
+        [TestMethod]
+        public void ParseMultiline_strings()
+        {
+            Assert.AreEqual(doc(node("string", list("my\nmultiline\nvalue"))), parser.Parse("string \"my\nmultiline\nvalue\""));
+        }
+
+        [TestMethod]
+        public void ParseComments()
+        {
+            KDLDocument actual = parser.Parse(
+                    "// C style\n" +
+
+                            "/*\n" +
+                            "C style multiline\n" +
+                            "*/\n" +
+
+                            "tag /*foo=true*/ bar=false\n" +
+
+                            "/*/*\n" +
+                            "hello\n" +
+                            "*/*/"
+            );
+
+            KDLDocument expected = doc(
+                    node("tag", dict("bar", false))
+            );
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void ParseMultiline_nodes()
+        {
+            KDLDocument actual = parser.Parse(
+                    "title \\\n" +
+                            "    \"Some title\"\n" +
+                            "my-node 1 2 \\    // comments are ok after \\\n" +
+                            "        3 4\n"
+            );
+
+            KDLDocument expected = doc(
+                    node("title", list("Some title")),
+                    node("my-node", list(1, 2, 3, 4))
+            );
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void ParseUtf8()
+        {
+            Assert.AreEqual(doc(node("smile", list("😁"))), parser.Parse("smile \"😁\""));
+
+            Assert.AreEqual(
+                doc(node("ノード", dict("お名前", "☜(ﾟヮﾟ☜)"))), 
+                parser.Parse("ノード お名前=\"☜(ﾟヮﾟ☜)\""));
+        }
+
+        [TestMethod]
+        public void ParseNode_names()
+        {
+            Assert.AreEqual(
+                doc(node("!@#$@$%Q#$%~@!40", list("1.2.3"), dict("!!!!!", true))), 
+                parser.Parse("\"!@#$@$%Q#$%~@!40\" \"1.2.3\" \"!!!!!\"=true"));
+
+            Assert.AreEqual(
+                doc(node("foo123~!@#$%^&*.:'|/?+", list("weeee"))), 
+                parser.Parse("foo123~!@#$%^&*.:'|/?+ \"weeee\""));
         }
     }
 }

@@ -101,7 +101,20 @@ namespace kdl_net
          */
         public static KDLDocument Empty => new KDLDocument(new List<KDLNode>(0));
 
-        public override string ToString() => "KDLDocument{nodes=" + Nodes.Count +"}";
+        public override string ToString() => "KDLDocument{nodes=" + NodesToString(Nodes) +"}";
+
+        private static string NodesToString(IEnumerable<KDLNode> nodes)
+        {
+            var sb = new StringBuilder();
+            foreach(var node in nodes)
+            {
+                if (sb.Length != 0)
+                    sb.Append(",");
+
+                sb.Append(node.ToKDL());
+            }
+            return sb.ToString();
+        }
 
         public override bool Equals(object obj)
         {

@@ -50,7 +50,7 @@ namespace kdl_net
     {
         public static KDLString From(string value) => new KDLString(value);
 
-        public static KDLString Empty => KDLString.From("");
+        public static KDLString Empty => From("");
 
         public KDLString(string value)
         {
@@ -64,9 +64,7 @@ namespace kdl_net
         public KDLBoolean? AsBoolean() => null;
 
         public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
-        {
-            throw new NotImplementedException();
-        }
+            => PrintUtil.WriteStringQuotedAppropriately(writer, Value, false, printConfig);
 
         public bool IsString => true;
         public bool IsNumber => false;
@@ -74,6 +72,10 @@ namespace kdl_net
         public bool IsNull => false;
 
         public override string ToString() => $"KDLString{{value='{Value}'}}";
+
+        public override bool Equals(object obj) => obj is KDLString x && x.Value == Value;
+
+        public override int GetHashCode() => Value.GetHashCode();
     }
 
     /**
@@ -103,6 +105,10 @@ namespace kdl_net
         public bool IsNull => true;
 
         public override string ToString() => $"KDLNull";
+
+        public override bool Equals(object obj) => obj is KDLNull;
+
+        public override int GetHashCode() => 0;
     }
 
     /**
@@ -135,6 +141,10 @@ namespace kdl_net
         public bool IsNull => false;
 
         public override string ToString() => $"KDLNumber{{value='{Value}'}}";
+
+        public override bool Equals(object obj) => obj is KDLNumber x && x.Value == Value;
+
+        public override int GetHashCode() => Value.GetHashCode();
     }
 
     /**
@@ -168,6 +178,10 @@ namespace kdl_net
         public bool IsNull => false;
 
         public override string ToString() => $"KDLBoolean{{value='{Value}'}}";
+
+        public override bool Equals(object obj) => obj is KDLBoolean b && b.Value == Value;
+
+        public override int GetHashCode() => Value.GetHashCode();
     }
 
     public interface IKDLValue : IKDLObject

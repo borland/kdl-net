@@ -102,7 +102,7 @@ namespace kdl_net
                 }
 
                 var node = ParseNode(context);
-                consumeAfterNode(context);
+                ConsumeAfterNode(context);
                 if (!skippingNode && node != null)
                 {
                     nodes.Add(node);
@@ -214,12 +214,12 @@ namespace kdl_net
             }
         }
 
-        String ParseIdentifier(KDLParseContext context) // throws IOException
+        string ParseIdentifier(KDLParseContext context) // throws IOException
         {
             int c = context.Peek();
             if (c == '"')
             {
-                return parseEscapedString(context);
+                return ParseEscapedString(context);
             }
             else if (IsValidBareIdStart(c))
             {
@@ -227,7 +227,7 @@ namespace kdl_net
                 {
                     context.Read();
                     int next = context.Peek();
-                    context.Unread('r'); // TODO implement PushBackStream it seems
+                    context.Unread('r');
                     if (next == '"' || next == '#')
                     {
                         return ParseRawString(context);
@@ -255,7 +255,7 @@ namespace kdl_net
             int c = context.Peek();
             if (c == '"')
             {
-                obj = new KDLString(parseEscapedString(context));
+                obj = new KDLString(ParseEscapedString(context));
             }
             else if (IsValidNumericStart(c))
             {
@@ -372,7 +372,7 @@ namespace kdl_net
             int c = context.Peek();
             if (c == '"')
             {
-                return new KDLString(parseEscapedString(context));
+                return new KDLString(ParseEscapedString(context));
             }
             else if (c == 'r')
             {
@@ -389,7 +389,7 @@ namespace kdl_net
                 while (IsLiteralChar(c))
                 {
                     context.Read();
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                     c = context.Peek();
                 }
 
@@ -610,7 +610,7 @@ namespace kdl_net
             return stringBuilder.ToString();
         }
 
-        String parseEscapedString(KDLParseContext context) // throws IOException
+        string ParseEscapedString(KDLParseContext context) // throws IOException
         {
             int c = context.Read();
             if (c != '"')
@@ -633,7 +633,7 @@ namespace kdl_net
                 }
                 else if (inEscape)
                 {
-                    stringBuilder.Append((char)getEscaped(c, context));
+                    stringBuilder.AppendCodePoint(GetEscaped(c, context));
                     inEscape = false;
                 }
                 else if (c == EOF)
@@ -647,7 +647,7 @@ namespace kdl_net
             }
         }
 
-        int getEscaped(int c, KDLParseContext context) // throws IOException
+        int GetEscaped(int c, KDLParseContext context) // throws IOException
         {
             switch (c)
             {
@@ -822,7 +822,7 @@ namespace kdl_net
             }
         }
 
-        void consumeAfterNode(KDLParseContext context) // throws IOException
+        void ConsumeAfterNode(KDLParseContext context) // throws IOException
         {
             int c = context.Peek();
             while (c == ';' || IsUnicodeWhitespace(c))
@@ -1073,5 +1073,17 @@ namespace kdl_net
                 }
             }
         }
+    }
+}
+
+
+static class StringBuilderExtensions
+{
+    internal static StringBuilder AppendCodePoint(this StringBuilder builder, int codePoint)
+    {
+        if (codePoint < char.MaxValue) // char.ConvertFromUtf32 allocates a temp string for multi-char codepoints; avoid for smaller chars
+            return builder.Append((char)codePoint);
+
+        return builder.Append(char.ConvertFromUtf32(codePoint)); // would fail for codepoints > 32 bits but I'm not sure we have any of those
     }
 }

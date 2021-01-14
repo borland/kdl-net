@@ -184,7 +184,7 @@ namespace kdl_net
         {
             if (pushbackPos > 0)
                 return pushbackQueue[pushbackPos - 1];
-            return reader.Read();
+            return reader.Peek();
         }
 
         public int Read()
