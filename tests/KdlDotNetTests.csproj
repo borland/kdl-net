@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\kdl-net.csproj" />
+    <ProjectReference Include="..\src\KdlDotNet.csproj" />
   </ItemGroup>
 
 </Project>
