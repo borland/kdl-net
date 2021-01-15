@@ -9,6 +9,10 @@ Many thanks for the original implementation.
 
 The library is built against .NET Standard 2.0, which means it should work on the .NET Desktop framework 4.7.2 or later, and .NET Core 2.0 and later. The unit tests run against both .NET 4.7.2 and .NET Core 3.1 and all passs.
 
+## Installation
+
+Install the [KdlDotNet Nuget package](https://www.nuget.org/packages/KdlDotNet), or you can build the source yourself.
+
 ## License
 
 KDL-net is licensed under the Creative Commons Attribution 4.0 License.
