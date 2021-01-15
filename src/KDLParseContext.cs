@@ -1,18 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace kdl_net
+#nullable enable
+
+namespace KdlDotNet
 {
     using static KDLParser;
     using static CharClasses;
 
     /**
- * Internal class wrapping the stream containing the document being read. Maintains a list of the last three lines read
- * in order to provide context in the event of a parse error.
- */
-    public class KDLParseContext
+     * Internal class wrapping the stream containing the document being read. Maintains a list of the last three lines read
+     * in order to provide context in the event of a parse error.
+     */
+    internal class KDLParseContext
     {
         private readonly PushBackReader reader;
         private readonly List<StringBuilder> lines = new List<StringBuilder>(); // C# Note: List is probably not very efficient; Java used a Dequeue here

@@ -5,7 +5,7 @@ using System.Text;
 
 #nullable enable
 
-namespace kdl_net
+namespace KdlDotNet
 {
     using static CharClasses;
 
@@ -1075,7 +1075,6 @@ namespace kdl_net
         }
     }
 }
-
 
 static class StringBuilderExtensions
 {

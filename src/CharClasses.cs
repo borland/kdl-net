@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿#nullable enable
 
-#nullable enable
-
-namespace kdl_net
+namespace KdlDotNet
 {
     /**
      * Various functions used during parsing and printing to check character membership in various character classes.

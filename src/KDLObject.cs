@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
 #nullable enable
 
-namespace kdl_net
+namespace KdlDotNet
 {
-
     /**
      * The base interface all objects parsed from a KDL document must implement
      */
@@ -35,7 +33,6 @@ namespace kdl_net
             var ms = new MemoryStream();
             var streamWriter = new StreamWriter(ms, Encoding.UTF8);
 
-
             obj.WriteKDL(streamWriter, PrintConfig.PrettyDefault);
             streamWriter.Flush();
 
@@ -44,8 +41,8 @@ namespace kdl_net
     }
 
     /**
- * A model object representing a string in a KDL document. Note that even if quoted, identifiers are not KDLStrings.
- */
+     * A model object representing a string in a KDL document. Note that even if quoted, identifiers are not KDLStrings.
+     */
     public class KDLString : IKDLValue
     {
         public static KDLString From(string value) => new KDLString(value);

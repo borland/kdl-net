@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 #nullable enable
 
-namespace kdl_net
+namespace KdlDotNet
 {
     public class KDLNode : IKDLObject
     {
-        private static IReadOnlyDictionary<string, IKDLValue> EmptyProps = new Dictionary<string, IKDLValue>(0);
-        private static IReadOnlyList<IKDLValue> EmptyArgs = new List<IKDLValue>(0);
+        private static readonly IReadOnlyDictionary<string, IKDLValue> EmptyProps = new Dictionary<string, IKDLValue>(0);
+        private static readonly IReadOnlyList<IKDLValue> EmptyArgs = new List<IKDLValue>(0);
 
         public KDLNode(string identifier) : this(identifier, EmptyProps, EmptyArgs, null) { }
 

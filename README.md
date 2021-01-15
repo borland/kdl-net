@@ -1,4 +1,4 @@
-## KDL-net
+## KdlDotNet
 
 This is a C# implementation of a parser for the [KDL Document Language](https://github.com/kdl-org/kdl).
 
@@ -11,7 +11,7 @@ The library is built against .NET Standard 2.0, which means it should work on th
 
 ## License
 
-KDL-net is licensed under CC-BY-SA 4.0, as it is a derived work of kdl4j, and the CC BY-SA 4.0 license requires this
+KDL-net is licensed under the Creative Commons Attribution 4.0 License.
 
 ## Status
 
@@ -28,5 +28,3 @@ https://gist.github.com/borland/3a8a0a8a56b3a4ef315e1f83f5ab4073
 
 
 ### PULL REQUESTS APPRECIATED 
-I'm not sure when I'll have time to complete them myself. 
-Once the numeric work is complete I'd be happy to publish a Nuget package so this can be consumed more easily by everyone

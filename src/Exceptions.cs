@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace kdl_net
+#nullable enable
+
+namespace KdlDotNet
 {
     /**
      * Thrown if an unexpected state is encountered while parsing a document. If you encounter this

@@ -1,7 +1,9 @@
-﻿using kdl_net;
+﻿using KdlDotNet;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
+
+#nullable enable
 
 namespace kdl_net_tests
 {
