@@ -15,12 +15,12 @@ namespace KdlDotNet
         internal const int EOF = -1;
         internal const int MaxUnicode = 0x10FFFF;
 
-        enum WhitespaceResult
+        internal enum WhitespaceResult
         {
             NoWhitespace, EndNode, SkipNext, NodeSpace
         }
 
-        enum SlashAction
+        internal enum SlashAction
         {
             EndNode, SkipNext, Nothing
         }
@@ -214,7 +214,7 @@ namespace KdlDotNet
             }
         }
 
-        string ParseIdentifier(KDLParseContext context) // throws IOException
+        internal string ParseIdentifier(KDLParseContext context) // throws IOException
         {
             int c = context.Peek();
             if (c == '"')
@@ -585,7 +585,7 @@ namespace KdlDotNet
             }
         }
 
-        string ParseBareIdentifier(KDLParseContext context) // throws IOException
+        internal string ParseBareIdentifier(KDLParseContext context) // throws IOException
         {
             int c = context.Read();
             if (!IsValidBareIdStart(c))
@@ -647,7 +647,7 @@ namespace KdlDotNet
             }
         }
 
-        int GetEscaped(int c, KDLParseContext context) // throws IOException
+        internal int GetEscaped(int c, KDLParseContext context) // throws IOException
         {
             switch (c)
             {
@@ -791,7 +791,7 @@ namespace KdlDotNet
             }
         }
 
-        SlashAction GetSlashAction(KDLParseContext context, bool escaped) // throws IOException
+        internal SlashAction GetSlashAction(KDLParseContext context, bool escaped) // throws IOException
         {
             int c = context.Read();
             if (c != '/')
@@ -822,7 +822,7 @@ namespace KdlDotNet
             }
         }
 
-        void ConsumeAfterNode(KDLParseContext context) // throws IOException
+        internal void ConsumeAfterNode(KDLParseContext context) // throws IOException
         {
             int c = context.Peek();
             while (c == ';' || IsUnicodeWhitespace(c))
@@ -832,7 +832,7 @@ namespace KdlDotNet
             }
         }
 
-        WhitespaceResult ConsumeWhitespaceAndBlockComments(KDLParseContext context) // throws IOException
+        internal WhitespaceResult ConsumeWhitespaceAndBlockComments(KDLParseContext context) // throws IOException
         {
             bool skipping = false;
             bool foundWhitespace = false;
@@ -989,7 +989,7 @@ namespace KdlDotNet
             }
         }
 
-        WhitespaceResult ConsumeWhitespaceAndLinespace(KDLParseContext context) // throws IOException
+        internal WhitespaceResult ConsumeWhitespaceAndLinespace(KDLParseContext context) // throws IOException
         {
             bool skipNext = false;
             bool foundWhitespace = false;
