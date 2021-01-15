@@ -467,7 +467,7 @@ namespace KdlDotNet
         //        context.Read();
         //        if (c != '_')
         //        {
-        //            stringBuilder.Append((char)c);
+        //            stringBuilder.AppendCodePoint((char)c);
         //        }
         //        c = context.Peek();
         //    }
@@ -505,7 +505,7 @@ namespace KdlDotNet
                 }
                 else
                 {
-                    stringBuilder.Append((char)sign);
+                    stringBuilder.AppendCodePoint(sign);
                     signLegal = false;
                 }
             }
@@ -528,7 +528,7 @@ namespace KdlDotNet
 
                     inFraction = true;
                     signLegal = false;
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                 }
                 else if (c == 'e' || c == 'E')
                 {
@@ -540,7 +540,7 @@ namespace KdlDotNet
                     inExponent = true;
                     inFraction = false;
                     signLegal = true;
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
 
                     if (context.Peek() == '_')
                     {
@@ -563,12 +563,12 @@ namespace KdlDotNet
                     }
 
                     signLegal = false;
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                 }
                 else
                 {
                     signLegal = false;
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                 }
 
                 c = context.Peek();
@@ -598,12 +598,12 @@ namespace KdlDotNet
             }
 
             var stringBuilder = new StringBuilder();
-            stringBuilder.Append((char)c);
+            stringBuilder.AppendCodePoint(c);
 
             c = context.Peek();
             while (IsValidBareIdChar(c) && c != EOF)
             {
-                stringBuilder.Append((char)context.Read());
+                stringBuilder.AppendCodePoint(context.Read());
                 c = context.Peek();
             }
 
@@ -642,7 +642,7 @@ namespace KdlDotNet
                 }
                 else
                 {
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                 }
             }
         }
@@ -688,7 +688,7 @@ namespace KdlDotNet
                                 throw new KDLParseException(string.Format("Unicode escape sequences must be valid hex chars, got: '%s'", (char)c));
                             }
 
-                            stringBuilder.Append((char)c);
+                            stringBuilder.AppendCodePoint(c);
                             c = context.Read();
                         }
 
@@ -786,7 +786,7 @@ namespace KdlDotNet
                 }
                 else
                 {
-                    stringBuilder.Append((char)c);
+                    stringBuilder.AppendCodePoint(c);
                 }
             }
         }

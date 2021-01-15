@@ -5,7 +5,7 @@ using System.Linq;
 
 #nullable enable
 
-namespace kdl_net_tests
+namespace KdlDotNetTests
 {
     [TestClass]
     public class TestParser

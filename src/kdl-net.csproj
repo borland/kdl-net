@@ -2,8 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>kdl_net</RootNamespace>
+    <RootNamespace>KdlDotNet</RootNamespace>
     <LangVersion>8.0</LangVersion>
+    <AssemblyName>KdlDotNet</AssemblyName>
   </PropertyGroup>
 
 </Project>
