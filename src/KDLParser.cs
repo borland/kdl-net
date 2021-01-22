@@ -111,7 +111,7 @@ namespace KdlDotNet
         }
 
 
-        KDLNode? ParseNode(KDLParseContext context) // throws IOException
+        internal KDLNode? ParseNode(KDLParseContext context) // throws IOException
         {
             var args = new List<IKDLValue>();
             var properties = new Dictionary<string, IKDLValue>();
@@ -338,12 +338,12 @@ namespace KdlDotNet
             }
         }
 
-        KDLDocument ParseChild(KDLParseContext context) // throws IOException
+        internal KDLDocument ParseChild(KDLParseContext context) // throws IOException
         {
             int c = context.Read();
             if (c != '{')
             {
-                throw new KDLInternalException(string.Format("Expected '{' but found '%s'", (char)c));
+                throw new KDLInternalException(string.Format("Expected '{{' but found '{0}'", (char)c));
             }
 
             var document = ParseDocument(context, false);
@@ -559,7 +559,7 @@ namespace KdlDotNet
                 {
                     if (!signLegal)
                     {
-                        throw new KDLParseException(string.Format("The sign character '%s' is not allowed here", (char)c));
+                        throw new KDLParseException(string.Format("The sign character '{0}' is not allowed here", (char)c));
                     }
 
                     signLegal = false;
@@ -610,7 +610,7 @@ namespace KdlDotNet
             return stringBuilder.ToString();
         }
 
-        string ParseEscapedString(KDLParseContext context) // throws IOException
+        internal string ParseEscapedString(KDLParseContext context) // throws IOException
         {
             int c = context.Read();
             if (c != '"')
@@ -685,7 +685,7 @@ namespace KdlDotNet
                             }
                             else if (!IsValidHexChar(c))
                             {
-                                throw new KDLParseException(string.Format("Unicode escape sequences must be valid hex chars, got: '%s'", (char)c));
+                                throw new KDLParseException(string.Format("Unicode escape sequences must be valid hex chars, got: '{0}'", (char)c));
                             }
 
                             stringBuilder.AppendCodePoint(c);
@@ -718,7 +718,7 @@ namespace KdlDotNet
                         }
                     }
                 default:
-                    throw new KDLParseException(string.Format("Illegal escape sequence: '\\%s'", (char)c));
+                    throw new KDLParseException(string.Format("Illegal escape sequence: '\\{0}'", (char)c));
             }
         }
 
@@ -818,7 +818,7 @@ namespace KdlDotNet
                         return SlashAction.EndNode;
                     }
                 default:
-                    throw new KDLParseException(string.Format("Unexpected character: '%s'", (char)c));
+                    throw new KDLParseException(string.Format("Unexpected character: '{0}'", (char)c));
             }
         }
 

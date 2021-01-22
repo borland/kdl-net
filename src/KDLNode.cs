@@ -13,13 +13,13 @@ namespace KdlDotNet
 
         public KDLNode(string identifier) : this(identifier, EmptyProps, EmptyArgs, null) { }
 
-        public KDLNode(string identifier, KDLDocument? child) : this(identifier, EmptyProps, EmptyArgs, child) { }
+        public KDLNode(string identifier, KDLDocument? child = null) : this(identifier, EmptyProps, EmptyArgs, child) { }
 
-        public KDLNode(string identifier, IReadOnlyList<IKDLValue> args, KDLDocument? child) : this(identifier, EmptyProps, args, child) { }
+        public KDLNode(string identifier, IReadOnlyList<IKDLValue> args, KDLDocument? child = null) : this(identifier, EmptyProps, args, child) { }
 
         public KDLNode(string identifier, IReadOnlyDictionary<string, IKDLValue> props) : this(identifier, props, EmptyArgs, null) { }
 
-        public KDLNode(string identifier, IReadOnlyDictionary<string, IKDLValue> props, IReadOnlyList<IKDLValue> args, KDLDocument? child)
+        public KDLNode(string identifier, IReadOnlyDictionary<string, IKDLValue> props, IReadOnlyList<IKDLValue> args, KDLDocument? child = null)
         {
             Identifier = identifier;
             Props = props; // C# Note: The java version wraps this in Collections.unmodifiableList. We use IReadOnlyList which is not quite the same, but hopefully close enough

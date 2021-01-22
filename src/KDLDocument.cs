@@ -18,6 +18,11 @@ namespace KdlDotNet
             Nodes = nodes;
         }
 
+        public KDLDocument(params KDLNode[] nodes)
+        {
+            Nodes = nodes; // normally would want to defensive copy here in case nodes is mutated externally, but "params" is compiler-generated and can't be modified
+        }
+
         public IReadOnlyList<KDLNode> Nodes { get; }
 
         public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
