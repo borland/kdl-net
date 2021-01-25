@@ -19,20 +19,84 @@ KDL-net is licensed under the Creative Commons Attribution 4.0 License.
 
 ## Status
 
-The scope of the library is small so you could probably use it safely in a constrained environment, and it has what I would consider very good unit test coverage.
+The scope of the library is small and it has what I would consider excellent unit test coverage.
+
 I would be happy to use it in production in a constrained environment, such as loading configuration files, etc. It hasn't had any proper performance benchmarking
-or profiling, so it is probably not suitable for use in a hot performance-critical codepath.
+or profiling, so it is probably not suitable for use in a performance-critical codepath such as a tight loop.
 
-I have successfully used this library to configure and boot up an ASP.NET Core application, using KDL in place of what would usually be a JSON file. KDL fits very nicely in this kind of environment.
+One Caveat: The KDL language spec itself is not final and may still yet change so I can't in all honesty say this is a production library. In my personal view, the spec looks pretty solid, and if it does change, I wouldn't expect it to do so in a major breaking way; rather I'd expect simple clarification of edge cases and bug-fixes. Hopefully nothing dramatic.
 
-Refer: [Screenshot](https://twitter.com/borland/status/1349596439840661505?s=20)
-and  
-[asp.net configuration helper code](https://gist.github.com/borland/3a8a0a8a56b3a4ef315e1f83f5ab4073)
+## Why KDL?
+
+I have successfully used this library to configure and boot up an ASP.NET Core application, using KDL in place of what would usually be a JSON file. KDL fits very nicely in this kind of environment. I've created an extension library Nuget Package called [KdlDotNet.Extensions.Configuration](https://www.nuget.org/packages/KdlDotNet.Extensions.Configuration/) to help with this.
+
+Look at the difference: Here is a snippet from a configuration file, first using the traditional JSON file syntax:
+
+```javascript
+"Logging": {
+    "IncludeScopes": false,
+    "Debug": {
+        "LogLevel": {
+            "Default": "Information"
+        }
+    },
+    "Console": {
+        "LogLevel": {
+            "Microsoft.AspNetCore.Mvc.Razor.Internal": "Warning",
+            "Microsoft.AspNetCore.Mvc.Razor": "Error",
+            "Default": "Warning"
+        }
+    },
+    "LogLevel": {
+        "Default": "Debug"
+    }
+},
+```
+
+Now look at the same thing in KDL using **KdlDotNet.Extensions.Configuration**.  
+It uses the flexibility of KDL's nodes and attributes to make it much shorter, it has less syntactical noise, and is less error prone. You can't screw up the trailing commas and so forth. KDL also has much improved support for comments which is nice.
+
+```java
+Logging IncludeScopes=false {
+    Debug {
+        LogLevel Default="Information"
+    }
+    Console {
+        LogLevel Default="Warning" {
+            Microsoft.AspNetCore.Mvc.Razor.Internal "Warning"
+            Microsoft.AspNetCore.Mvc.Razor "Error"
+        }
+    }
+    LogLevel Default="Debug"
+}
+```
 
 ## Usage
 
-Create a new instance of `KDLParser` and call the `Parse` method, either on a `Stream` if you have one from a file/network, or from a `string`.  
-You will get back a `KDLDocument`; you can then iterate the document `Nodes`, and for each `KDLNode`, inspect its `Args` and `Props`.
+### ASP.NET Core configuration
+
+To use it for your asp.net core projects, simply add a single reference to the nuget package `KdlDotNet.Extensions.Configuration` - eg
+
+```xml
+<PackageReference Include="KdlDotNet.Extensions.Configuration" Version="5.0.0" />
+```
+
+Once you have done so, find your `ConfigurationBuilder` (usually in Program.cs), and change `.AddJsonFile` to `.AddKdlFile`, then reformat your JSON into KDL and enjoy
+
+### Other non-specific usage
+
+If you want to do something other than configure asp.net core applications, you'll need to interact with the parser directly.
+Add a nuget package reference to the [KdlDotNet](https://www.nuget.org/packages/KdlDotNet/) package
+
+```xml
+<PackageReference Include="KdlDotNet" Version="1.0.0" />
+```
+
+Then create a new instance of `KdlDotNet.KDLParser` and call the `Parse` method, either on a `Stream` if you have one from a file/network, or from a `string`.  
+You will get back a `KDLDocument`.
+You can then iterate the document `Nodes`, and for each `KDLNode`, inspect its `Args` and `Props`.
+
+For an example, see [KdlConfigurationFileParser.cs from KdlDotNet.Extensions.Configuration](https://github.com/borland/kdl-net/blob/main/KdlDotNet.Extensions.Configuration/src/KdlConfigurationFileParser.cs)
 
 Alternatively, you can manually create a `KDLDocument` and the various child nodes, and then call `ToKDLPretty` to produce a KDL string, or write to a stream.
 
@@ -53,4 +117,4 @@ kdl-net in contrast uses an 8 byte storage structure, which is a union containin
 This means kdl-net can't handle numbers that exceed the size of an int64 or double, however it should require a lot less memory and be faster.
 Given that the primary use-case for KDL at this stage seems to be human-readable configuration, this seems like a better tradeoff.
 
-### PULL REQUESTS APPRECIATED 
+**PULL REQUESTS APPRECIATED**
