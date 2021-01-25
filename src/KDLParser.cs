@@ -367,7 +367,7 @@ namespace KdlDotNet
             return document;
         }
 
-        IKDLValue ParseValue(KDLParseContext context) // throws IOException
+        internal IKDLValue ParseValue(KDLParseContext context) // throws IOException
         {
             int c = context.Peek();
             if (c == '"')
@@ -403,88 +403,89 @@ namespace KdlDotNet
             }
         }
 
-        KDLNumber ParseNumber(KDLParseContext context) // throws IOException
+        internal KDLNumber ParseNumber(KDLParseContext context) // throws IOException
         {
-            //int radix = 10;
-            //Predicate<Integer> legalChars = null;
+            int radix = 10;
+            Predicate<int> legalChars = x => throw new InvalidOperationException("ParseNonDecimalNumber should not be invoked for a decimal number");
 
-            //int c = context.Peek();
-            //if (c == '0')
-            //{
-            //    context.Read();
-            //    c = context.Peek();
-            //    if (c == 'x')
-            //    {
-            //        context.Read();
-            //        radix = 16;
-            //        legalChars = CharClasses::isValidHexChar;
-            //    }
-            //    else if (c == 'o')
-            //    {
-            //        context.Read();
-            //        radix = 8;
-            //        legalChars = CharClasses::isValidOctalChar;
-            //    }
-            //    else if (c == 'b')
-            //    {
-            //        context.Read();
-            //        radix = 2;
-            //        legalChars = CharClasses::isValidBinaryChar;
-            //    }
-            //    else
-            //    {
-            //        context.unread('0');
-            //        radix = 10;
-            //    }
-            //}
-            //else
-            //{
-            //    radix = 10;
-            //}
+            int c = context.Peek();
+            if (c == '0')
+            {
+                context.Read();
+                c = context.Peek();
+                if (c == 'x')
+                {
+                    context.Read();
+                    radix = 16;
+                    legalChars = IsValidHexChar;
+                }
+                else if (c == 'o')
+                {
+                    context.Read();
+                    radix = 8;
+                    legalChars = IsValidOctalChar;
+                }
+                else if (c == 'b')
+                {
+                    context.Read();
+                    radix = 2;
+                    legalChars = IsValidBinaryChar;
+                }
+                else
+                {
+                    context.Unread('0');
+                    radix = 10;
+                }
+            }
+            else
+            {
+                radix = 10;
+            }
 
-            //if (radix == 10)
-            //{
-            return ParseDecimalNumber(context);
-            //}
-            //else
-            //{
-            //    return parseNonDecimalNumber(context, legalChars, radix);
-            //}
+            if (radix == 10)
+            {
+                return ParseDecimalNumber(context);
+            }
+            else
+            {
+                return ParseNonDecimalNumber(context, legalChars, radix);
+            }
         }
 
-        //KDLNumber ParseNonDecimalNumber(KDLParseContext context, Predicate<Integer> legalChars, int radix) // throws IOException
-        //{
-        //    var stringBuilder = new StringBuilder();
+        KDLNumber ParseNonDecimalNumber(KDLParseContext context, Predicate<int> legalChars, int radix) // throws IOException
+        {
+            var stringBuilder = new StringBuilder();
 
-        //    int c = context.Peek();
-        //    if (c == '_')
-        //    {
-        //        throw new KDLParseException("The first character after radix indicator must not be '_'");
-        //    }
+            int c = context.Peek();
+            if (c == '_')
+            {
+                throw new KDLParseException("The first character after radix indicator must not be '_'");
+            }
 
-        //    while (legalChars.test(c) || c == '_')
-        //    {
-        //        context.Read();
-        //        if (c != '_')
-        //        {
-        //            stringBuilder.AppendCodePoint((char)c);
-        //        }
-        //        c = context.Peek();
-        //    }
+            while (legalChars(c) || c == '_')
+            {
+                context.Read();
+                if (c != '_')
+                {
+                    stringBuilder.AppendCodePoint((char)c);
+                }
+                c = context.Peek();
+            }
 
-        //    final String str = stringBuilder.ToString();
-        //    if (str.isEmpty())
-        //    {
-        //        throw new KDLParseException("Must include at least one digit following radix marker");
-        //    }
+            var str = stringBuilder.ToString();
+            if (str.Length == 0)
+            {
+                throw new KDLParseException("Must include at least one digit following radix marker");
+            }
 
-        //    return KDLNumber.from(new BigInteger(str, radix), radix);
-        //}
+            return KDLNumber.From(str, radix, KDLNumberParseFlags.None)!;
+        }
 
         // Unfortunately, in order to match the grammar we have to do a lot of parsing ourselves here
         KDLNumber ParseDecimalNumber(KDLParseContext context) // throws IOException
         {
             var stringBuilder = new StringBuilder();
+            KDLNumberParseFlags parseFlags = KDLNumberParseFlags.None;
 
             bool inFraction = false;
             bool inExponent = false;
@@ -526,6 +527,8 @@ namespace KdlDotNet
                         throw new KDLParseException("The character following '.' in a decimal number must be a decimal digit");
                     }
 
+                    parseFlags |= KDLNumberParseFlags.HasDecimalPoint; // hint for KDLNumber.From
+
                     inFraction = true;
                     signLegal = false;
                     stringBuilder.AppendCodePoint(c);
@@ -536,6 +539,8 @@ namespace KdlDotNet
                     {
                         throw new KDLParseException(string.Format("Found '{0}' in exponent", (char)c));
                     }
+
+                    parseFlags |= KDLNumberParseFlags.HasScientificNotation; // hint for KDLNumber.From
 
                     inExponent = true;
                     inFraction = false;
@@ -577,7 +582,7 @@ namespace KdlDotNet
             var val = stringBuilder.ToString();
             try
             {
-                return KDLNumber.From(val)!; // C# Note: Java does BigDecimal conversion here
+                return KDLNumber.From(val, 10, parseFlags)!; // radix must always be 10 here
             }
             catch (FormatException e)
             {
@@ -722,7 +727,7 @@ namespace KdlDotNet
             }
         }
 
-        string ParseRawString(KDLParseContext context) // throws IOException
+        internal string ParseRawString(KDLParseContext context) // throws IOException
         {
             int c = context.Read();
             if (c != 'r')

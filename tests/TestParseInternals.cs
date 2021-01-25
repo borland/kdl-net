@@ -48,19 +48,19 @@ namespace KdlDotNetTests
 
         [DataRow("", KDLParser.WhitespaceResult.EndNode, "")]
         [DataRow("\n", KDLParser.WhitespaceResult.EndNode, "")]
-        [DataRow( "   \n/- a", KDLParser.WhitespaceResult.SkipNext, "a" )]
-        [DataRow( "\\\r\na", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( " \\\r\n \\\n \\\ra", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( " a ", KDLParser.WhitespaceResult.NodeSpace, "a " )]
-        [DataRow( "a", KDLParser.WhitespaceResult.NoWhitespace, "a" )]
-        [DataRow( "\\\na", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( "\\\ra", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( "\t", KDLParser.WhitespaceResult.EndNode, "" )]
-        [DataRow( "/* comment */a", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( "\t a", KDLParser.WhitespaceResult.NodeSpace, "a" )]
-        [DataRow( "\\ a", null, "a" )]
-        [DataRow( "/- ", null, "" )]
-        [DataRow( "/- \n", null, "\n")]
+        [DataRow("   \n/- a", KDLParser.WhitespaceResult.SkipNext, "a")]
+        [DataRow("\\\r\na", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow(" \\\r\n \\\n \\\ra", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow(" a ", KDLParser.WhitespaceResult.NodeSpace, "a ")]
+        [DataRow("a", KDLParser.WhitespaceResult.NoWhitespace, "a")]
+        [DataRow("\\\na", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow("\\\ra", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow("\t", KDLParser.WhitespaceResult.EndNode, "")]
+        [DataRow("/* comment */a", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow("\t a", KDLParser.WhitespaceResult.NodeSpace, "a")]
+        [DataRow("\\ a", null, "a")]
+        [DataRow("/- ", null, "")]
+        [DataRow("/- \n", null, "\n")]
         [DataTestMethod]
         public void TestConsumeWhitespaceAndLinespace(string input, object expectedResultObj, string expectedRemainder)
         {
@@ -234,7 +234,8 @@ namespace KdlDotNetTests
                 "doc()" => KDLDocument.Empty,
                 "doc(a)" => new KDLDocument(new KDLNode("a")),
                 "doc(a,b)" => new KDLDocument(new KDLNode("a"), new KDLNode("b")),
-                _ => null
+                null => null,
+                _ => throw new ArgumentException($"Unhandled placeholder {expectedResultPlaceholder}")
             };
 
             try
@@ -242,7 +243,7 @@ namespace KdlDotNetTests
                 KDLDocument val = TestUtil.Parser.ParseChild(context);
                 Assert.AreEqual(expectedResult, val);
             }
-            catch (Exception e) when(e is KDLParseException || e is KDLInternalException)
+            catch (Exception e) when (e is KDLParseException || e is KDLInternalException)
             {
                 if (expectedResult != null)
                 {
@@ -323,8 +324,8 @@ namespace KdlDotNetTests
         [DataRow("a key=\"val\" key=\"val2\"", "node(a) key=val2")]
         [DataRow("a key=\"val\" /- key=\"val2\"", "node(a) key=val")]
         [DataRow("a {}", "node(a) {}")]
-        //[DataRow("a {\nb\n}", KDLNode.builder().setIdentifier("a").setChild(KDLDocument.builder().addNode(KDLNode.builder().setIdentifier("b").build()).build()).build())]
-        //[DataRow("a \"arg\" key=null \\\n{\nb\n}", KDLNode.builder().setIdentifier("a").addArg("arg").addNullProp("key").setChild(KDLDocument.builder().addNode(KDLNode.builder().setIdentifier("b").build()).build()).build())]
+        [DataRow("a {\nb\n}", "node(a) {b}")]
+        [DataRow("a \"arg\" key=null \\\n{\nb\n}", "node(a) key=null arg {b}")]
         [DataRow("a {\n\n}", "node(a) {}")]
         [DataRow("a{\n\n}", "node(a) {}")]
         [DataRow("a\"arg\"", null)]
@@ -343,16 +344,198 @@ namespace KdlDotNetTests
                 "node(a) key=true" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLBoolean.True }),
                 "node(a) key=val arg" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg") }),
                 "node(a) key=val arg\"" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg\"") }),
-                "node(a) true false null" => new KDLNode("a", args: new IKDLValue [] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
+                "node(a) true false null" => new KDLNode("a", args: new IKDLValue[] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
                 "node(a) arg2" => new KDLNode("a", args: new[] { new KDLString("arg2") }),
-                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, IKDLValue>{ ["key"] = new KDLString("val2") }),
+                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val2") }),
+                "node(a) {b}" => new KDLNode("a", child: new KDLDocument(new KDLNode("b"))),
+                "node(a) key=null arg {b}" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLNull.Instance }, args: new[] { new KDLString("arg") }, child: new KDLDocument(new KDLNode("b"))),
                 "node(a) {}" => new KDLNode("a", child: KDLDocument.Empty),
-                _ => null
+                null => null,
+                _ => throw new ArgumentException($"Unhandled placeholder {expectedResultPlaceholder}")
             };
 
             try
             {
                 KDLNode? val = TestUtil.Parser.ParseNode(context);
+                Assert.AreEqual(expectedResult, val);
+            }
+            catch (KDLParseException e)
+            {
+                if (expectedResult != null)
+                {
+                    throw new KDLParseException("Expected no errors", e);
+                }
+            }
+        }
+
+        [DataRow("0")]
+        [DataRow("-0")]
+        [DataRow("1")]
+        [DataRow("01")]
+        [DataRow("10")]
+        [DataRow("1_0")]
+        [DataRow("-10")]
+        [DataRow("+10")]
+        [DataRow("1.0")]
+        [DataRow("9223372036854775807")]
+        [DataRow("1e10")]
+        [DataRow("1e+10")]
+        [DataRow("1E+10")]
+        [DataRow("1e-10")]
+        [DataRow("-1e-10")]
+        [DataRow("+1e-10")]
+        [DataRow("0x0")]
+        [DataRow("0xFF")]
+        [DataRow("0xF_F")]
+        [DataRow("0o0")]
+        [DataRow("0o7")]
+        [DataRow("0o77")]
+        [DataRow("0o7_7")]
+        [DataRow("0b0")]
+        [DataRow("0b1")]
+        [DataRow("0b10")]
+        [DataRow("0b1_0")]
+        [DataRow("A")]
+        [DataRow("_")]
+        [DataRow("_1")]
+        [DataRow("+_1")]
+        [DataRow("0xRR")]
+        [DataRow("0o8")]
+        [DataRow("0b2")]
+        [DataTestMethod]
+        public void TestParseNumber(string input)
+        {
+            var context = TestUtil.StrToContext(input);
+            var expectedResult = input switch { // can't have complex data in a DataRow attribute in C#
+               "0" => KDLNumber.From(0),
+               "-0" => KDLNumber.From(0),
+               "1" => KDLNumber.From(1),
+               "01" => KDLNumber.From(1),
+               "10" => KDLNumber.From(10),
+               "1_0" => KDLNumber.From(10),
+               "-10" => KDLNumber.From(-10),
+               "+10" => KDLNumber.From(10),
+               "1.0" => KDLNumber.From(1.0),
+                "9223372036854775807" => KDLNumber.From(9223372036854775807),
+               "1e10" => KDLNumber.From(1e10),
+               "1e+10" => KDLNumber.From(1e10),
+               "1E+10" => KDLNumber.From(1e10),
+               "1e-10" => KDLNumber.From(1e-10),
+               "-1e-10" => KDLNumber.From(-1e-10),
+               "+1e-10" => KDLNumber.From(1e-10),
+               "0x0" => KDLNumber.From(0),
+               "0xFF" => KDLNumber.From(255),
+               "0xF_F" => KDLNumber.From(255),
+               "0o0" => KDLNumber.From(0),
+               "0o7" => KDLNumber.From(7),
+               "0o77" => KDLNumber.From(63),
+               "0o7_7" => KDLNumber.From(63),
+               "0b0" => KDLNumber.From(0),
+               "0b1" => KDLNumber.From(1),
+               "0b10" => KDLNumber.From(2),
+               "0b1_0" => KDLNumber.From(2),
+               "A" => null,
+               "_" => null,
+               "_1" => null,
+               "+_1" => null,
+               "0xRR" => null,
+               "0o8" => null,
+               "0b2" => null,
+                null => null,
+                _ => throw new ArgumentException($"Unhandled placeholder {input}")
+            };
+
+            try
+            {
+                KDLNumber val = TestUtil.Parser.ParseNumber(context);
+                Assert.AreEqual(expectedResult, val);
+            }
+            catch (Exception e) when (e is KDLParseException || e is KDLInternalException)
+            {
+                if (expectedResult != null)
+                {
+                    throw new KDLParseException("Expected no errors", e);
+                }
+            }
+        }
+
+        [DataRow("r\"\"", "", "")]
+        [DataRow("r\"\n\"", "\n", "")]
+        [DataRow("r\"\\n\"", "\\n", "")]
+        [DataRow("r\"\\u{0001}\"", "\\u{0001}", "")]
+        [DataRow("r#\"\"#", "", "")]
+        [DataRow("r#\"a\"#", "a", "")]
+        [DataRow("r##\"\"#\"##", "\"#", "")]
+        [DataRow("\"\"", null, "\"")]
+        [DataRow("r", null, "")]
+        [DataRow("r\"", null, "")]
+        [DataRow("r#\"a\"##", null, "")]
+        [DataRow("", null, "")]
+        [DataTestMethod]
+        public void TestParseRawString(string input, string? expectedResult, string expectedRemainder)
+        {
+            var context = TestUtil.StrToContext(input);
+
+            try
+            {
+                string val = TestUtil.Parser.ParseRawString(context);
+                Assert.AreEqual(expectedResult, val);
+            }
+            catch (Exception e) when (e is KDLParseException || e is KDLInternalException)
+            {
+                if (expectedResult != null)
+                {
+                    throw new KDLParseException("Expected no errors", e);
+                }
+            }
+
+            var rem = TestUtil.ReadRemainder(context);
+            Assert.AreEqual(expectedRemainder, rem);
+        }
+
+        [DataRow("0", "number(0)")]
+        [DataRow("10", "number(10)")]
+        [DataRow("-10", "number(-10)")]
+        [DataRow("+10", "number(10)")]
+        [DataRow("\"\"", "string()")]
+        [DataRow("\"r\"", "string(r)")]
+        [DataRow("\"\n\"", "string.newLine")]
+        [DataRow("\"\\n\"", "string.newLine")]
+        [DataRow("r\"\"", "string()")]
+        [DataRow("r\"\n\"", "string.newLine")]
+        [DataRow("r\"\\n\"", "string.escapedNewLine")]
+        [DataRow("true", "boolean(true)")]
+        [DataRow("false", "boolean(false)")]
+        [DataRow("null", "null")]
+        [DataRow("\"true\"", "string(true)")]
+        [DataRow("\"false\"", "string(false)")]
+        [DataRow("\"null\"", "string(null)")]
+        [DataRow("garbage", null)]
+        [DataTestMethod]
+        public void TestParseValue(string input, string? expectedResultPlaceholder)
+        {
+            var context = TestUtil.StrToContext(input);
+            IKDLValue? expectedResult = expectedResultPlaceholder switch {
+                "number(0)" => KDLNumber.From(0),
+                "number(10)" => KDLNumber.From(10),
+                "number(-10)" => KDLNumber.From(-10),
+                "string()" => KDLString.From(""),
+                "string(r)" => KDLString.From("r"),
+                "string.newLine" => KDLString.From("\n"),
+                "string.escapedNewLine" => KDLString.From("\\n"),
+                "boolean(true)" => KDLBoolean.True,
+                "boolean(false)" => KDLBoolean.False,
+                "null" => KDLNull.Instance,
+                "string(true)" => KDLString.From("true"),
+                "string(false)" => KDLString.From("false"),
+                "string(null)" => KDLString.From("null"),
+                null => null,
+                _ => throw new ArgumentException($"Unhandled placeholder {expectedResultPlaceholder}")
+            };
+
+            try
+            {
+                IKDLValue val = TestUtil.Parser.ParseValue(context);
                 Assert.AreEqual(expectedResult, val);
             }
             catch (KDLParseException e)

@@ -35,6 +35,9 @@ namespace KdlDotNetTests
                     elementSelector: (kv) => KDLValue.From(kv.Value)),
                 child: null);
 
+        static KDLNode node(string ident, List<IKDLValue> args)
+            => new KDLNode(ident, args: args, child: null);
+
         static KDLNode node(string ident, List<object> args, params KDLNode[] nodes)
             => new KDLNode(ident, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
 
@@ -121,30 +124,31 @@ namespace KdlDotNetTests
             Assert.ThrowsException<KDLParseException>(() => parser.Parse("node \"\\u{c0ffee}\""));
         }
 
-        //    [TestMethod]
-        //    public void float()
-        //    {
-        //        Assert.AreEqual(doc(node("node", list(1.0))), parser.Parse("node 1.0"));
-        //        Assert.AreEqual(doc(node("node", list(0.0))), parser.Parse("node 0.0"));
-        //        Assert.AreEqual(doc(node("node", list(-1.0))), parser.Parse("node -1.0"));
-        //        Assert.AreEqual(doc(node("node", list(1.0))), parser.Parse("node +1.0"));
-        //        Assert.AreEqual(doc(node("node", list(1.0e10))), parser.Parse("node 1.0e10"));
-        //        Assert.AreEqual(doc(node("node", list(1.0e-10))), parser.Parse("node 1.0e-10"));
-        //        assertThat(parser.Parse("node 123_456_789.0"),
-        //                equalTo(doc(node("node", list(new BigDecimal("123456789.0"))))));
+        [TestMethod]
+        public void ParseFloat()
+        {
+            Assert.AreEqual(doc(node("node", list(1.0))), parser.Parse("node 1.0"));
+            Assert.AreEqual(doc(node("node", list(0.0))), parser.Parse("node 0.0"));
+            Assert.AreEqual(doc(node("node", list(-1.0))), parser.Parse("node -1.0"));
+            Assert.AreEqual(doc(node("node", list(1.0))), parser.Parse("node +1.0"));
+            Assert.AreEqual(doc(node("node", list(1.0e10))), parser.Parse("node 1.0e10"));
+            Assert.AreEqual(doc(node("node", list(1.0e-10))), parser.Parse("node 1.0e-10"));
+            Assert.AreEqual(
+                doc(node("node", list(123456789.0))),
+                parser.Parse("node 123_456_789.0"));
 
-        //        Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 123_456_789.0_"));
-        //        assertThat(() -> parser.Parse("node ?1.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node _1.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node .0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1.0E100E10"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1.0E1.10"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1.0.0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1.0.0E7"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1.E7"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1._0"), throwsException(KDLParseException.class));
-        //        assertThat(() -> parser.Parse("node 1."), throwsException(KDLParseException.class));
-        //    }
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 123_456_789.0_"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node ?1.0"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node _1.0"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node .0"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1.0E100E10"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1.0E1.10"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1.0.0"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1.0.0E7"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1.E7"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1._0"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 1."));
+        }
 
         [TestMethod]
         public void ParseInteger()
@@ -164,51 +168,51 @@ namespace KdlDotNetTests
             Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x_1"));
         }
 
-        //    [TestMethod]
-        //    public void hexadecimal()
-        //{
-        //    KDLNumber kdlNumber = new KDLNumber(new BigDecimal(new BigInteger("0123456789abcdef", 16)), 16);
+        [TestMethod]
+        public void ParseHexadecimal()
+        {
+            var kdlNumber = new KDLNumber(0x0123456789abcdef);
 
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x0123456789abcdef"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef_"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x0123456789abcdef"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef_"));
 
-        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x_123"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xg"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xx"));
-        //    }
-
-        //    [TestMethod]
-        //    public void octal()
-        //{
-        //    KDLNumber kdlNumber = new KDLNumber(new BigDecimal(01234567), 8);
-
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o0123_4567"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567_"));
-
-        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o_123"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o8"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0oo"));
-        //    }
-
-        //    [TestMethod]
-        //    public void binary()
-        //{
-        //    KDLNumber kdlNumber = new KDLNumber(new BigDecimal(6), 2);
-
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01_10"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01___10"));
-        //    Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110_"));
-
-        //    Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b_0110"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b20"));
-        //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0bb"));
-        //    }
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0x_123"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xg"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0xx"));
+        }
 
         [TestMethod]
-        public void ParseRaw_string()
+        public void ParseOctal()
+        {
+            var kdlNumber = new KDLNumber(342391); // this is 1234567 in octal
+
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o0123_4567"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567_"));
+
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o_123"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0o8"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0oo"));
+        }
+
+        [TestMethod]
+        public void ParseBinary()
+        {
+            var kdlNumber = new KDLNumber(6); // this is 110 in binary
+
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01_10"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01___10"));
+            Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110_"));
+
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b_0110"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0b20"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node 0bb"));
+        }
+
+        [TestMethod]
+        public void ParseRawString()
         {
             Assert.AreEqual(doc(node("node", list("foo"))), parser.Parse("node r\"foo\""));
             Assert.AreEqual(doc(node("node", list("foo\\nbar"))), parser.Parse("node r\"foo\\nbar\""));
@@ -217,7 +221,7 @@ namespace KdlDotNetTests
             Assert.AreEqual(doc(node("node", list("\\nfoo\\r"))), parser.Parse("node r\"\\nfoo\\r\""));
             Assert.AreEqual(doc(node("node", list("hello\"world"))), parser.Parse("node r#\"hello\"world\"#"));
 
-            //Assert.ThrowsException<KDLParseException>(() => parser.Parse("node r##\"foo\"#"));
+            Assert.ThrowsException<KDLParseException>(() => parser.Parse("node r##\"foo\"#"));
         }
 
         [TestMethod]
@@ -228,7 +232,7 @@ namespace KdlDotNetTests
         }
 
         [TestMethod]
-        public void ParseNode_space()
+        public void ParseNodeSpace()
         {
             Assert.AreEqual(doc(node("node", list(1))), parser.Parse("node 1"));
             Assert.AreEqual(doc(node("node", list(1))), parser.Parse("node\t1"));
@@ -237,7 +241,7 @@ namespace KdlDotNetTests
         }
 
         [TestMethod]
-        public void ParseSingle_line_comment()
+        public void ParseSingleLineComment()
         {
             Assert.AreEqual(doc(), parser.Parse("//hello"));
             Assert.AreEqual(doc(), parser.Parse("// \thello"));
@@ -249,7 +253,7 @@ namespace KdlDotNetTests
         }
 
         [TestMethod]
-        public void ParseMulti_line_comment()
+        public void ParseMultiLineComment()
         {
             Assert.AreEqual(doc(), parser.Parse("/*hello*/"));
             Assert.AreEqual(doc(), parser.Parse("/*hello*/\n"));

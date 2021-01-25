@@ -97,6 +97,9 @@ namespace KdlDotNet
             }
         }
 
+        public override string ToString()
+            => $"KDLNode{{identifier={Identifier}, props={string.Join(",", Props)}, args={string.Join(",", Args)}, child=}}";
+
         public override bool Equals(object obj)
         {
             if (!(obj is KDLNode other))

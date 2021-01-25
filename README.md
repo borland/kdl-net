@@ -19,16 +19,38 @@ KDL-net is licensed under the Creative Commons Attribution 4.0 License.
 
 ## Status
 
-Alpha quality, but the scope of the library is small so you could probably use it safely in a constrained environment.
-Most of the code has been properly ported from Java, along with the key unit tests.
-The only missing piece is the parsing and handling of non-integer numbers, and the unit tests for more detailed internal parts of the library.
-The KDL grammar supports hex, octal, float/decimal and scientific notation in addition to plain integers which makes this quite tricky to handle correctly, making it tricky to port across from Java.
+The scope of the library is small so you could probably use it safely in a constrained environment, and it has what I would consider very good unit test coverage.
+I would be happy to use it in production in a constrained environment, such as loading configuration files, etc. It hasn't had any proper performance benchmarking
+or profiling, so it is probably not suitable for use in a hot performance-critical codepath.
 
-I have successfully used this library to configure and boot up an ASP.NET Core application, using KDL in place of what would usually be a JSON file.
+I have successfully used this library to configure and boot up an ASP.NET Core application, using KDL in place of what would usually be a JSON file. KDL fits very nicely in this kind of environment.
 
-Refer: https://twitter.com/borland/status/1349596439840661505?s=20  
+Refer: [Screenshot](https://twitter.com/borland/status/1349596439840661505?s=20)
 and  
-https://gist.github.com/borland/3a8a0a8a56b3a4ef315e1f83f5ab4073
+[asp.net configuration helper code](https://gist.github.com/borland/3a8a0a8a56b3a4ef315e1f83f5ab4073)
 
+## Usage
+
+Create a new instance of `KDLParser` and call the `Parse` method, either on a `Stream` if you have one from a file/network, or from a `string`.  
+You will get back a `KDLDocument`; you can then iterate the document `Nodes`, and for each `KDLNode`, inspect its `Args` and `Props`.
+
+Alternatively, you can manually create a `KDLDocument` and the various child nodes, and then call `ToKDLPretty` to produce a KDL string, or write to a stream.
+
+## Differences from kdl4j
+
+This port is faithful to the original kdl4j in all areas apart from handling of numbers and the "Searcher" type.
+All of the code has been properly ported from Java, along with all key unit tests
+
+#### Searcher
+I don't think this is as neccessary in C#, given that it has LINQ for traversing object graphs. If you disagree and would like it, please file an issue, preferably with an attached pull request :-)
+
+#### Numeric Handling
+kdl4j uses the java BigDecimal type as the internal representation for all numbers. 
+Presumably this was done for ease of implementation as it lets kdl4j have a simpler code path for handling numbers, 
+however BigDecimal is a large and complex thing, weighing in at a minimum of 32 bytes per instance (over and above the surrounding KDLNumber object).
+
+kdl-net in contrast uses an 8 byte storage structure, which is a union containing either an int32, int64, or double (8 byte floating point) value.
+This means kdl-net can't handle numbers that exceed the size of an int64 or double, however it should require a lot less memory and be faster.
+Given that the primary use-case for KDL at this stage seems to be human-readable configuration, this seems like a better tradeoff.
 
 ### PULL REQUESTS APPRECIATED 
