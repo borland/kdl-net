@@ -264,13 +264,13 @@ namespace KdlDotNet
         public KDLNumber(long value)
         {
             storage.int64Value = value;
-            storageType = KDLNumberType.Int32;
+            storageType = KDLNumberType.Int64;
         }
 
         public KDLNumber(double value)
         {
             storage.doubleValue = value;
-            storageType = KDLNumberType.Int32;
+            storageType = KDLNumberType.Float64;
         }
 
         public int AsInt() => storageType switch {

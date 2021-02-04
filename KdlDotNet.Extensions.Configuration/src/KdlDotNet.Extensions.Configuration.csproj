@@ -6,10 +6,10 @@
     <LangVersion>8.0</LangVersion>
     <AssemblyName>KdlDotNet.Extensions.Configuration</AssemblyName>
 
-    <PackageVersion>5.0.0</PackageVersion>
-    <AssemblyVersion>5.0.0</AssemblyVersion>
-    <FileVersion>5.0.0</FileVersion>
-    <Version>5.0.0</Version>
+    <PackageVersion>5.0.1</PackageVersion>
+    <AssemblyVersion>5.0.1</AssemblyVersion>
+    <FileVersion>5.0.1</FileVersion>
+    <Version>5.0.1</Version>
     <Authors>Orion Edwards</Authors>
     <Company />
     <PackageLicenseExpression>CC-BY-4.0</PackageLicenseExpression>
@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="KdlDotNet" Version="1.0.0" />
+    <PackageReference Include="KdlDotNet" Version="1.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="5.0.0" />
