@@ -62,7 +62,7 @@ namespace KdlDotNet
         public string ToKDLPretty(PrintConfig printConfig)
         {
             var writer = new MemoryStream();
-            var bufferedWriter = new StreamWriter(writer, Encoding.UTF8);
+            var bufferedWriter = new StreamWriter(writer, KDLObjectExtensions.UTF8NoByteOrderMarkerEncoding); // no BOM
 
             WriteKDLPretty(bufferedWriter, printConfig);
             bufferedWriter.Flush();

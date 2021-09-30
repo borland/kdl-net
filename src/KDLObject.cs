@@ -24,6 +24,8 @@ namespace KdlDotNet
 
     public static class KDLObjectExtensions
     {
+        internal static UTF8Encoding UTF8NoByteOrderMarkerEncoding = new UTF8Encoding(false);
+
         /**
          * Generate a string with the text representation of the given object.
          *
@@ -32,7 +34,7 @@ namespace KdlDotNet
         public static string ToKDL(this IKDLObject obj)
         {
             var ms = new MemoryStream();
-            var streamWriter = new StreamWriter(ms, Encoding.UTF8);
+            var streamWriter = new StreamWriter(ms, UTF8NoByteOrderMarkerEncoding);
 
             obj.WriteKDL(streamWriter, PrintConfig.PrettyDefault);
             streamWriter.Flush();
