@@ -441,8 +441,8 @@ namespace KdlDotNetTests
                "0xRR" => null,
                "0o8" => null,
                "0b2" => null,
-                null => null,
-                _ => throw new ArgumentException($"Unhandled placeholder {input}")
+               null => null,
+               _ => throw new ArgumentException($"Unhandled placeholder {input}")
             };
 
             try

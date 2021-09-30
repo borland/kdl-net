@@ -387,8 +387,8 @@ namespace KdlDotNetTests
                 parser.Parse("\"!@#$@$%Q#$%~@!40\" \"1.2.3\" \"!!!!!\"=true"));
 
             Assert.AreEqual(
-                doc(node("foo123~!@#$%^&*.:'|/?+", list("weeee"))), 
-                parser.Parse("foo123~!@#$%^&*.:'|/?+ \"weeee\""));
+                doc(node("foo123~!@#$%^&*.:'|?+", list("weeee"))), 
+                parser.Parse("foo123~!@#$%^&*.:'|?+ \"weeee\""));
         }
     }
 }
