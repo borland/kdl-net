@@ -113,8 +113,8 @@ namespace KdlDotNet
 
         internal KDLNode? ParseNode(KDLParseContext context) // throws IOException
         {
-            var args = new List<IKDLValue>();
-            var properties = new Dictionary<string, IKDLValue>();
+            var args = new List<KDLValue>();
+            var properties = new Dictionary<string, KDLValue>();
             KDLDocument? child = null;
 
             int c = context.Peek();
@@ -123,6 +123,7 @@ namespace KdlDotNet
                 return null;
             }
 
+            var type = ParseTypeIfPresent(context);
             var identifier = ParseIdentifier(context);
             while (true)
             {
@@ -134,20 +135,20 @@ namespace KdlDotNet
                         if (c == '{')
                         {
                             child = ParseChild(context);
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else if (IsUnicodeLinespace(c))
                         {
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         if (c == EOF)
                         {
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else
                         {
                             var obj = ParseArgOrProp(context);
-                            if (obj is IKDLValue kdlValue)
+                            if (obj is KDLValue kdlValue)
                             {
                                 args.Add(kdlValue);
                             }
@@ -168,28 +169,28 @@ namespace KdlDotNet
                         if (c == '{')
                         {
                             child = ParseChild(context);
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else if (IsUnicodeLinespace(c) || c == EOF)
                         {
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else if (c == ';')
                         {
                             context.Read();
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else
                         {
                             throw new KDLParseException($"Unexpected character: '{(char)c}'");
                         }
                     case WhitespaceResult.EndNode:
-                        return new KDLNode(identifier, properties, args, child);
+                        return new KDLNode(identifier, type, properties, args, child);
                     case WhitespaceResult.SkipNext:
                         if (c == '{')
                         {
                             ParseChild(context); //Ignored
-                            return new KDLNode(identifier, properties, args, child);
+                            return new KDLNode(identifier, type, properties, args, child);
                         }
                         else if (IsUnicodeLinespace(c))
                         {
@@ -202,7 +203,7 @@ namespace KdlDotNet
                         else
                         {
                             var obj = ParseArgOrProp(context);
-                            if (!(obj is IKDLValue) && !(obj is KDLProperty))
+                            if (!(obj is KDLValue) && !(obj is KDLProperty))
                             {
                                 throw new KDLInternalException(
                                         string.Format("Unexpected type found, expected property, arg, or child: '{0}' type: {1}",
@@ -251,15 +252,16 @@ namespace KdlDotNet
         IKDLObject ParseArgOrProp(KDLParseContext context) // throws IOException
         {
             IKDLObject obj;
+            var type = ParseTypeIfPresent(context);
             bool isBare = false;
             int c = context.Peek();
             if (c == '"')
             {
-                obj = new KDLString(ParseEscapedString(context));
+                obj = new KDLString(ParseEscapedString(context), type);
             }
             else if (IsValidNumericStart(c))
             {
-                obj = ParseNumber(context);
+                obj = ParseNumber(context, type);
             }
             else if (IsValidBareIdStart(c))
             {
@@ -297,21 +299,21 @@ namespace KdlDotNet
                     }
                     else if ("null" == strVal)
                     {
-                        obj = KDLNull.Instance;
+                        obj = new KDLNull(type);
                     }
                     else
                     {
-                        obj = new KDLString(strVal);
+                        obj = new KDLString(strVal, type);
                     }
                 }
                 else
                 {
-                    obj = new KDLString(strVal);
+                    obj = new KDLString(strVal, type);
                 }
             }
             else
             {
-                throw new KDLParseException(string.Format("Unexpected character: '{0}'", (char)c));
+                throw new KDLParseException($"Unexpected character: '{(char)c}'");
             }
 
             if (obj is KDLString kdlString)
@@ -319,6 +321,9 @@ namespace KdlDotNet
                 c = context.Peek();
                 if (c == '=')
                 {
+                    if(type != null)
+                        throw new KDLParseException("Illegal type annotation before property, annotations should follow the '=' and precede the value");
+
                     context.Read();
                     var value = ParseValue(context);
                     return new KDLProperty(kdlString.Value, value);
@@ -367,20 +372,37 @@ namespace KdlDotNet
             return document;
         }
 
-        internal IKDLValue ParseValue(KDLParseContext context) // throws IOException
+        internal string? ParseTypeIfPresent(KDLParseContext context) // throws IOException
         {
+            string? type = null;
+            int c = context.Peek();
+            if (c == '(') 
+            {
+                context.Read();
+                type = ParseIdentifier(context);
+                c = context.Read();
+                if (c != ')')
+                    throw new KDLParseException("Un-terminated type annotation, missing closing paren.");
+            }
+
+            return type;
+        }
+
+        internal KDLValue ParseValue(KDLParseContext context) // throws IOException
+        {
+            var type = ParseTypeIfPresent(context);
             int c = context.Peek();
             if (c == '"')
             {
-                return new KDLString(ParseEscapedString(context));
+                return new KDLString(ParseEscapedString(context), type);
             }
             else if (c == 'r')
             {
-                return new KDLString(ParseRawString(context));
+                return new KDLString(ParseRawString(context), type);
             }
             else if (IsValidNumericStart(c))
             {
-                return ParseNumber(context);
+                return ParseNumber(context, type);
             }
             else
             {
@@ -395,15 +417,15 @@ namespace KdlDotNet
 
                 var strVal = stringBuilder.ToString();
                 return strVal switch {
-                    "true" => KDLBoolean.True,
-                    "false" => KDLBoolean.False,
-                    "null" => KDLNull.Instance,
+                    "true" => new KDLBoolean(true, type),
+                    "false" => new KDLBoolean(false, type),
+                    "null" => new KDLNull(type),
                     _ => throw new KDLParseException(string.Format("Unknown literal in property value: '{0}' Expected 'true', 'false', or 'null'", strVal))
                 };
             }
         }
 
-        internal KDLNumber ParseNumber(KDLParseContext context) // throws IOException
+        internal KDLNumber ParseNumber(KDLParseContext context, string? type = null) // throws IOException
         {
             int radix = 10;
             Predicate<int> legalChars = x => throw new InvalidOperationException("ParseNonDecimalNumber should not be invoked for a decimal number");
@@ -444,15 +466,15 @@ namespace KdlDotNet
 
             if (radix == 10)
             {
-                return ParseDecimalNumber(context);
+                return ParseDecimalNumber(context, type);
             }
             else
             {
-                return ParseNonDecimalNumber(context, legalChars, radix);
+                return ParseNonDecimalNumber(context, legalChars, radix, type);
             }
         }
 
-        KDLNumber ParseNonDecimalNumber(KDLParseContext context, Predicate<int> legalChars, int radix) // throws IOException
+        KDLNumber ParseNonDecimalNumber(KDLParseContext context, Predicate<int> legalChars, int radix, string? type) // throws IOException
         {
             var stringBuilder = new StringBuilder();
 
@@ -478,11 +500,11 @@ namespace KdlDotNet
                 throw new KDLParseException("Must include at least one digit following radix marker");
             }
 
-            return KDLNumber.From(str, radix, KDLNumberParseFlags.None)!;
+            return KDLNumber.From(str, radix, type, KDLNumberParseFlags.None)!;
         }
 
         // Unfortunately, in order to match the grammar we have to do a lot of parsing ourselves here
-        KDLNumber ParseDecimalNumber(KDLParseContext context) // throws IOException
+        KDLNumber ParseDecimalNumber(KDLParseContext context, string? type) // throws IOException
         {
             var stringBuilder = new StringBuilder();
             KDLNumberParseFlags parseFlags = KDLNumberParseFlags.None;
@@ -582,7 +604,7 @@ namespace KdlDotNet
             var val = stringBuilder.ToString();
             try
             {
-                return KDLNumber.From(val, 10, parseFlags)!; // radix must always be 10 here
+                return KDLNumber.From(val, 10, type, parseFlags)!; // radix must always be 10 here
             }
             catch (FormatException e)
             {
@@ -619,9 +641,7 @@ namespace KdlDotNet
         {
             int c = context.Read();
             if (c != '"')
-            {
                 throw new KDLInternalException("No quote at the beginning of escaped string");
-            }
 
             var stringBuilder = new StringBuilder();
             bool inEscape = false;
@@ -677,9 +697,7 @@ namespace KdlDotNet
                         var stringBuilder = new StringBuilder(6);
                         c = context.Read();
                         if (c != '{')
-                        {
                             throw new KDLParseException("Unicode escape sequences must be surround by {} brackets");
-                        }
 
                         c = context.Read();
                         while (c != '}')

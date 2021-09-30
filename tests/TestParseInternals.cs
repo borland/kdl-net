@@ -340,15 +340,15 @@ namespace KdlDotNetTests
                 "node(r)" => new KDLNode("r"),
                 "node(rrrr)" => new KDLNode("rrrr"),
                 "node(a) arg" => new KDLNode("a", args: new[] { new KDLString("arg") }),
-                "node(a) key=val" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }),
-                "node(a) key=true" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLBoolean.True }),
-                "node(a) key=val arg" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg") }),
-                "node(a) key=val arg\"" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg\"") }),
-                "node(a) true false null" => new KDLNode("a", args: new IKDLValue[] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
+                "node(a) key=val" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }),
+                "node(a) key=true" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = KDLBoolean.True }),
+                "node(a) key=val arg" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg") }),
+                "node(a) key=val arg\"" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg\"") }),
+                "node(a) true false null" => new KDLNode("a", args: new KDLValue[] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
                 "node(a) arg2" => new KDLNode("a", args: new[] { new KDLString("arg2") }),
-                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val2") }),
+                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val2") }),
                 "node(a) {b}" => new KDLNode("a", child: new KDLDocument(new KDLNode("b"))),
-                "node(a) key=null arg {b}" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLNull.Instance }, args: new[] { new KDLString("arg") }, child: new KDLDocument(new KDLNode("b"))),
+                "node(a) key=null arg {b}" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = KDLNull.Instance }, args: new[] { new KDLString("arg") }, child: new KDLDocument(new KDLNode("b"))),
                 "node(a) {}" => new KDLNode("a", child: KDLDocument.Empty),
                 null => null,
                 _ => throw new ArgumentException($"Unhandled placeholder {expectedResultPlaceholder}")
@@ -515,7 +515,7 @@ namespace KdlDotNetTests
         public void TestParseValue(string input, string? expectedResultPlaceholder)
         {
             var context = TestUtil.StrToContext(input);
-            IKDLValue? expectedResult = expectedResultPlaceholder switch {
+            KDLValue? expectedResult = expectedResultPlaceholder switch {
                 "number(0)" => KDLNumber.From(0),
                 "number(10)" => KDLNumber.From(10),
                 "number(-10)" => KDLNumber.From(-10),
@@ -535,7 +535,7 @@ namespace KdlDotNetTests
 
             try
             {
-                IKDLValue val = TestUtil.Parser.ParseValue(context);
+                KDLValue val = TestUtil.Parser.ParseValue(context);
                 Assert.AreEqual(expectedResult, val);
             }
             catch (KDLParseException e)

@@ -44,32 +44,31 @@ namespace KdlDotNet
     /**
      * A model object representing a string in a KDL document. Note that even if quoted, identifiers are not KDLStrings.
      */
-    public class KDLString : IKDLValue
+    public class KDLString : KDLValue<string>
     {
         public static KDLString From(string value) => new KDLString(value);
 
         public static KDLString Empty => From("");
 
-        public KDLString(string value)
+        public KDLString(string value) : this(value, null) { }
+
+        public KDLString(string value, string? type) : base(type)
         {
             Value = value;
         }
 
-        public string Value { get; }
+        public override string Value { get; }
 
-        public KDLString AsString() => this;
-        public KDLNumber? AsNumber() => KDLNumber.From(Value);
-        public KDLBoolean? AsBoolean() => null;
+        public override KDLString AsString() => this;
+        public override KDLNumber? AsNumber() => KDLNumber.From(Value);
+        public override KDLBoolean? AsBoolean() => null;
 
-        public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
+        protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
             => PrintUtil.WriteStringQuotedAppropriately(writer, Value, false, printConfig);
 
-        public bool IsString => true;
-        public bool IsNumber => false;
-        public bool IsBoolean => false;
-        public bool IsNull => false;
+        public override bool IsString => true;
 
-        public override string ToString() => $"KDLString{{value='{Value}'}}";
+        public override string ToString() => $"KDLString{{value='{Value}', type={Type}}}";
 
         public override bool Equals(object obj) => obj is KDLString x && x.Value == Value;
 
@@ -79,32 +78,29 @@ namespace KdlDotNet
     /**
      * A model object representing the KDL 'null' value.
      */
-    public class KDLNull : IKDLValue
+    public class KDLNull : KDLValue
     {
-        public static KDLNull Instance { get; } = new KDLNull();
+        public static KDLNull Instance { get; } = new KDLNull(null);
 
         private static readonly KDLString asKdlStr = KDLString.From("null");
 
         /**
          * New instances should not be created, instead use the INSTANCE constant
          */
-        private KDLNull() { }
+        public KDLNull(string? type) : base(type) { }
 
-        public KDLString AsString() => asKdlStr;
-        public KDLNumber? AsNumber() => null;
-        public KDLBoolean? AsBoolean() => null;
+        public override KDLString AsString() => asKdlStr;
+        public override KDLNumber? AsNumber() => null;
+        public override KDLBoolean? AsBoolean() => null;
 
-        public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
+        protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
             => writer.Write("null");
 
-        public bool IsString => false;
-        public bool IsNumber => false;
-        public bool IsBoolean => false;
-        public bool IsNull => true;
+        public override bool IsNull => true;
 
-        public override string ToString() => $"KDLNull";
+        public override string ToString() => $"KDLNull{{type={Type}}}";
 
-        public override bool Equals(object obj) => obj is KDLNull;
+        public override bool Equals(object obj) => obj is KDLNull other && Type == other.Type;
 
         public override int GetHashCode() => 0;
     }
@@ -130,20 +126,39 @@ namespace KdlDotNet
      * Representation of a KDL number. Numbers may be base 16, 10, 8, or 2 as stored in the radix field. Base 10 numbers may
      * be fractional, but all others are limited to integers.
      */
-    public class KDLNumber : IKDLValue
+    public class KDLNumber : KDLValue // not a KDLValue<T> because of the way we share number storage. Consider splitting into KdlNumberInt, KdlNumberLong, etc subclasses
     {
-        public static KDLNumber Zero { get; } = new KDLNumber(0);
+        public static KDLNumber Zero(int radix) => Zero(radix, null);
+
+        public static KDLNumber Zero(int radix, string? type)
+        {
+            switch (radix)
+            {
+                case 2:
+                case 8:
+                case 10:
+                case 16:
+                    return new KDLNumber(0, radix, type);
+                default:
+                    throw new ArgumentException("Radix must be one of: [2, 8, 10, 16]", nameof(radix));
+            }
+        }
 
         public static KDLNumber From(int value) => new KDLNumber(value);
-        public static KDLNumber From(long value) => new KDLNumber(value);
-        public static KDLNumber From(double value) => new KDLNumber(value);
+        public static KDLNumber From(int value, int radix, string? type) => new KDLNumber(value, radix, type);
 
-        public static KDLNumber? From(string val)
+        public static KDLNumber From(long value) => new KDLNumber(value);
+        public static KDLNumber From(long value, int radix, string? type) => new KDLNumber(value, radix, type);
+
+        public static KDLNumber From(double value) => new KDLNumber(value);
+        public static KDLNumber From(double value, int radix, string? type) => new KDLNumber(value, radix, type);
+
+        public static KDLNumber? From(string val) => From(val, null);
+
+        public static KDLNumber? From(string val, string? type)
         {
             if (val.Length == 0)
-            {
                 return null;
-            }
 
             int radix;
             string toParse;
@@ -152,7 +167,7 @@ namespace KdlDotNet
             {
                 if (val.Length == 1)
                 {
-                    return Zero;
+                    return Zero(10, type);
                 }
 
                 switch (val[1])
@@ -195,35 +210,33 @@ namespace KdlDotNet
                 }
             }
 
-            return From(toParse, radix, parseFlags);
+            return From(toParse, radix, type, parseFlags);
         }
 
         // val should be the number AFTER stripping off any 0x or 0b prefix
-        internal static KDLNumber? From(string val, int radix, KDLNumberParseFlags flags)
+        internal static KDLNumber? From(string val, int radix, string? type, KDLNumberParseFlags flags)
         {
             if (val.Length == 0)
-            {
                 return null;
-            }
 
             try
             {
                 if (radix == 10 && flags.HasFlag(KDLNumberParseFlags.HasDecimalPoint))
                 {
-                    return From(double.Parse(val)); // deliberate throw on parse so we can catch formatException
+                    return From(double.Parse(val), radix, type); // deliberate throw on parse so we can catch formatException
                 }
                 else if (radix == 10 && flags.HasFlag(KDLNumberParseFlags.HasScientificNotation))
                 {
-                    return From((double)decimal.Parse(val, System.Globalization.NumberStyles.Float)); // the literal 1e10 is double in C#, so we use that
+                    return From((double)decimal.Parse(val, System.Globalization.NumberStyles.Float), radix, type); // the literal 1e10 is double in C#, so we use that
                 }
 
                 try // the vast majority of numbers we are likely to see in a KDL file will be ints, so fast-path that
                 {
-                    return From(Convert.ToInt32(val, radix));
+                    return From(Convert.ToInt32(val, radix), radix, type);
                 }
                 catch(OverflowException) // fallback to int64 for bigger numbers
                 {
-                    return From(Convert.ToInt64(val, radix));
+                    return From(Convert.ToInt64(val, radix), radix, type);
                 }
                 // NOTE if we have a number bigger than int64 we'll need to put in a BigInteger or something, but we don't support that at this point in time
             }
@@ -233,6 +246,7 @@ namespace KdlDotNet
             }
         }
 
+        private readonly int radix;
         private readonly Storage storage;
         private readonly KDLNumberType storageType;
 
@@ -255,22 +269,25 @@ namespace KdlDotNet
             public static bool operator !=(Storage a, Storage b) => !(a == b);
         }
 
-        public KDLNumber(int value) 
+        public KDLNumber(int value, int radix = 10, string? type = null) : base(type)
         {
-            storage.int32Value = value;
-            storageType = KDLNumberType.Int32;
+            this.radix = radix;
+            this.storage.int32Value = value;
+            this.storageType = KDLNumberType.Int32;
         }
 
-        public KDLNumber(long value)
+        public KDLNumber(long value, int radix = 10, string? type = null) : base(type)
         {
-            storage.int64Value = value;
-            storageType = KDLNumberType.Int64;
+            this.radix = radix;
+            this.storage.int64Value = value;
+            this.storageType = KDLNumberType.Int64;
         }
 
-        public KDLNumber(double value)
+        public KDLNumber(double value, int radix = 10, string? type = null) : base(type)
         {
-            storage.doubleValue = value;
-            storageType = KDLNumberType.Float64;
+            this.radix = radix;
+            this.storage.doubleValue = value;
+            this.storageType = KDLNumberType.Float64;
         }
 
         public int AsInt() => storageType switch {
@@ -294,11 +311,11 @@ namespace KdlDotNet
             _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
         };
 
-        public KDLString AsString() => KDLString.From(AsBasicString());
+        public override KDLString AsString() => new KDLString(AsBasicString(), type: Type); // TODO radix on ToString?
 
-        public KDLNumber? AsNumber() => this;
+        public override KDLNumber? AsNumber() => this;
 
-        public KDLBoolean? AsBoolean() => null;
+        public override KDLBoolean? AsBoolean() => null;
 
         public string AsBasicString() => storageType switch {
             KDLNumberType.Int32 => storage.int32Value.ToString(),
@@ -307,17 +324,16 @@ namespace KdlDotNet
             _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
         };
 
-        public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
+        // TODO this method is doesn't support ShouldRespectRadix yet
+        protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
             => writer.Write(AsBasicString());
 
-        public bool IsString => false;
-        public bool IsNumber => true;
-        public bool IsBoolean => false;
-        public bool IsNull => false;
+        public override bool IsNumber => true;
 
-        public override string ToString() => $"KDLNumber{{value='{AsBasicString()}'}}";
+        public override string ToString() => $"KDLNumber{{value='{AsBasicString()}', type={Type}}}";
 
-        public override bool Equals(object obj) => obj is KDLNumber x && x.storageType == storageType && x.storage == storage;
+        public override bool Equals(object obj)
+            => obj is KDLNumber other && other.storageType == storageType && other.storage == storage && other.Type == Type;
 
         public override int GetHashCode()
         {
@@ -334,78 +350,135 @@ namespace KdlDotNet
     /**
      * A KDL object holding a boolean value. New instances should not be created, instead use the TRUE or FALSE constants
      */
-    public class KDLBoolean : IKDLValue
+    public class KDLBoolean : KDLValue<bool>
     {
+        public static KDLBoolean? FromString(string str, string? type) => str switch
+        {
+            "true" => type == null ? True : new KDLBoolean(true, type),
+            "false" => type == null ? False : new KDLBoolean(false, type),
+            _ => null,
+        };
+
         public static KDLBoolean True { get; } = new KDLBoolean(true);
         public static KDLBoolean False { get; } = new KDLBoolean(false);
 
         private static readonly KDLString trueStr = KDLString.From("true");
         private static readonly KDLString falseStr = KDLString.From("false");
 
-        private KDLBoolean(bool value)
-        {
-            Value = value;
-        }
+        public KDLBoolean(bool value) : this(value, null) { }
 
-        public bool Value { get; }
+        public KDLBoolean(bool value, string? type) : base(type)
+            => Value = value;
 
-        public KDLString AsString() => Value ? trueStr : falseStr;
-        public KDLNumber? AsNumber() => null;
-        public KDLBoolean? AsBoolean() => this;
+        public override bool Value { get; }
 
-        public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
+        public override KDLString AsString() => Value ? trueStr : falseStr;
+        public override KDLNumber? AsNumber() => null;
+        public override KDLBoolean? AsBoolean() => this;
+
+        protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
             => writer.Write(Value ? "true" : "false");
 
-        public bool IsString => false;
-        public bool IsNumber => false;
-        public bool IsBoolean => true;
-        public bool IsNull => false;
+        public override bool IsBoolean => true;
 
-        public override string ToString() => $"KDLBoolean{{value='{Value}'}}";
+        public override string ToString() => $"KDLBoolean{{value='{Value}', type={Type}}}";
 
-        public override bool Equals(object obj) => obj is KDLBoolean b && b.Value == Value;
+        public override bool Equals(object obj)
+            => obj is KDLBoolean other && other.Value == Value && Type == other.Type;
 
         public override int GetHashCode() => Value.GetHashCode();
     }
 
-    public interface IKDLValue : IKDLObject
+    public abstract class KDLValue<T> : KDLValue
     {
-        KDLString AsString();
-        KDLNumber? AsNumber();
-        KDLBoolean? AsBoolean();
+        protected KDLValue(string? type) : base(type)
+        { }
 
-        bool IsString { get; }
-        bool IsNumber { get; }
-        bool IsBoolean { get; }
-        bool IsNull { get; }
+        public abstract T Value { get; }
     }
 
-    public static class KDLValue
+    public abstract class KDLValue : IKDLObject
     {
-        public static IKDLValue From(object o)
+        public static KDLValue From(object o) => From(o, null);
+
+        public static KDLValue From(object o, string? type)
         {
             if (o == null)
-                return KDLNull.Instance;
-            
-            if (o is bool b) 
-                return b ? KDLBoolean.True : KDLBoolean.False;
-           
+                return type == null ? KDLNull.Instance : new KDLNull(type);
+
+            if (o is bool b)
+                return type == null ?
+                    b ? KDLBoolean.True : KDLBoolean.False :
+                    new KDLBoolean(b, type);
+
             if (o is int i)
-                return new KDLNumber(i);
+                return new KDLNumber(i, type: type);
 
             if (o is long l)
-                return new KDLNumber(l);
+                return new KDLNumber(l, type: type);
 
             if (o is double d)
-                return new KDLNumber(d);
+                return new KDLNumber(d, type: type);
 
             if (o is string s)
-                return new KDLString(s);
-            
-            if (o is IKDLValue k) 
+                return new KDLString(s, type);
+
+            if (o is KDLValue k)
                 return k;
 
             throw new ArgumentException($"No KDLValue for object {o}");
         }
+
+        public KDLValue(string? type)
+        {
+            Type = type;
+        }
+
+        public string? Type { get; }
+
+        public void WriteKDL(StreamWriter writer, PrintConfig printConfig)
+        {
+            if(Type != null)
+            {
+                writer.Write('(');
+                PrintUtil.WriteStringQuotedAppropriately(writer, Type, true, printConfig);
+                writer.Write(')');
+            }
+            WriteKDLValue(writer, printConfig);
+        }
+
+        protected abstract void WriteKDLValue(StreamWriter writer, PrintConfig printConfig); // throws IOException;
+
+        public abstract KDLString AsString();
+        public abstract KDLNumber? AsNumber();
+        public abstract KDLBoolean? AsBoolean();
+
+        public virtual bool IsString => false;
+        public virtual bool IsNumber => false;
+        public virtual bool IsBoolean => false;
+        public virtual bool IsNull => false;
+
+        // we expect derived classes to override this
+        public override bool Equals(object obj)
+            => obj is KDLValue other && GetType() == other.GetType() && Type == other.Type;
+
+        // derived classes must override this
+        public override int GetHashCode() => GetType().GetHashCode() ^ Type?.GetHashCode() ?? 0;
+
+        public static bool operator == (KDLValue a, KDLValue b)
+        {
+            if (a is null)
+            {
+                if (b is null)
+                    return true;
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(KDLValue a, KDLValue b) => !(a == b);
     }
 }

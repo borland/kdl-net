@@ -6,16 +6,16 @@
     <LangVersion>8.0</LangVersion>
     <AssemblyName>KdlDotNet</AssemblyName>
 
-    <PackageVersion>1.0.1</PackageVersion>
-    <AssemblyVersion>1.0.1</AssemblyVersion>
-    <FileVersion>1.0.1</FileVersion>
-    <Version>1.0.1</Version>
+    <PackageVersion>1.1.0</PackageVersion>
+    <AssemblyVersion>1.1.0</AssemblyVersion>
+    <FileVersion>1.1.0</FileVersion>
+    <Version>1.1.0</Version>
     <Authors>Orion Edwards</Authors>
     <Company />
     <PackageLicenseExpression>CC-BY-4.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/borland/kdl-net</PackageProjectUrl>
     <Description>C# Implementation of a parser for the KDL Document Language.</Description>
-    <Copyright>Orion Edwards 2020</Copyright>
+    <Copyright>Orion Edwards 2021</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

@@ -15,31 +15,31 @@ namespace KdlDotNetTests
         static KDLDocument doc() => KDLDocument.Empty;
         static KDLDocument doc(params KDLNode[] nodes) => new KDLDocument(nodes);
 
-        static List<IKDLValue> list(params IKDLValue[] values) => new List<IKDLValue>(values);
+        static List<KDLValue> list(params KDLValue[] values) => new List<KDLValue>(values);
         static List<object> list(params object[] values) => new List<object>(values);
 
         static Dictionary<string, object> dict(string key, object value) => new Dictionary<string, object>(1) { [key] = value };
 
         static KDLNode node(string ident) => new KDLNode(ident);
-        static KDLNode node(string ident, params KDLNode[] nodes) => new KDLNode(ident, child: doc(nodes));
+        static KDLNode node(string ident, params KDLNode[] nodes) => new KDLNode(ident, (string?)null, child: doc(nodes));
 
         static KDLNode node(string ident, Dictionary<string, object> props)
             => node(ident, args: new List<object>(0), props: props);
 
         static KDLNode node(string ident, List<object> args, Dictionary<string, object> props)
             => new KDLNode(
-                ident, 
+                ident, null,
                 args: args.Select(a => KDLValue.From(a)).ToList(),
                 props: props.ToDictionary(
                     keySelector: (kv) => kv.Key,
                     elementSelector: (kv) => KDLValue.From(kv.Value)),
                 child: null);
 
-        static KDLNode node(string ident, List<IKDLValue> args)
-            => new KDLNode(ident, args: args, child: null);
+        static KDLNode node(string ident, List<KDLValue> args)
+            => new KDLNode(ident, (string?)null, args: args, child: null);
 
         static KDLNode node(string ident, List<object> args, params KDLNode[] nodes)
-            => new KDLNode(ident, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
+            => new KDLNode(ident, (string?)null, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
 
 #pragma warning restore
 

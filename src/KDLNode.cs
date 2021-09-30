@@ -8,28 +8,37 @@ namespace KdlDotNet
 {
     public class KDLNode : IKDLObject
     {
-        private static readonly IReadOnlyDictionary<string, IKDLValue> EmptyProps = new Dictionary<string, IKDLValue>(0);
-        private static readonly IReadOnlyList<IKDLValue> EmptyArgs = new List<IKDLValue>(0);
+        private static readonly IReadOnlyDictionary<string, KDLValue> EmptyProps = new Dictionary<string, KDLValue>(0);
+        private static readonly IReadOnlyList<KDLValue> EmptyArgs = new List<KDLValue>(0);
 
-        public KDLNode(string identifier) : this(identifier, EmptyProps, EmptyArgs, null) { }
+        public KDLNode(string identifier) : this(identifier, null, EmptyProps, EmptyArgs, null) { }
+        
+        public KDLNode(string identifier, string? type) : this(identifier, type, EmptyProps, EmptyArgs, null) { }
 
-        public KDLNode(string identifier, KDLDocument? child = null) : this(identifier, EmptyProps, EmptyArgs, child) { }
+        public KDLNode(string identifier, KDLDocument? child = null) : this(identifier, null, EmptyProps, EmptyArgs, child) { }
+        public KDLNode(string identifier, string? type, KDLDocument? child = null) : this(identifier, type, EmptyProps, EmptyArgs, child) { }
+        
+        public KDLNode(string identifier, IReadOnlyList<KDLValue> args, KDLDocument? child = null) : this(identifier, null, EmptyProps, args, child) { }
+        public KDLNode(string identifier, string? type, IReadOnlyList<KDLValue> args, KDLDocument? child = null) : this(identifier, type, EmptyProps, args, child) { }
+        
+        public KDLNode(string identifier, IReadOnlyDictionary<string, KDLValue> props) : this(identifier, null, props, EmptyArgs, null) { }
+        public KDLNode(string identifier, string? type, IReadOnlyDictionary<string, KDLValue> props) : this(identifier, type, props, EmptyArgs, null) { }
 
-        public KDLNode(string identifier, IReadOnlyList<IKDLValue> args, KDLDocument? child = null) : this(identifier, EmptyProps, args, child) { }
-
-        public KDLNode(string identifier, IReadOnlyDictionary<string, IKDLValue> props) : this(identifier, props, EmptyArgs, null) { }
-
-        public KDLNode(string identifier, IReadOnlyDictionary<string, IKDLValue> props, IReadOnlyList<IKDLValue> args, KDLDocument? child = null)
+        public KDLNode(string identifier, IReadOnlyDictionary<string, KDLValue> props, IReadOnlyList<KDLValue> args, KDLDocument? child = null) : this(identifier, null, props, args, child) { }
+        public KDLNode(string identifier, string? type, IReadOnlyDictionary<string, KDLValue> props, IReadOnlyList<KDLValue> args, KDLDocument? child = null)
         {
             Identifier = identifier;
+            Type = type;
             Props = props; // C# Note: The java version wraps this in Collections.unmodifiableList. We use IReadOnlyList which is not quite the same, but hopefully close enough
             Args = args;
             Child = child;
         }
 
+
         public string Identifier { get; }
-        public IReadOnlyDictionary<string, IKDLValue> Props { get; }
-        public IReadOnlyList<IKDLValue> Args { get; }
+        public string? Type { get; }
+        public IReadOnlyDictionary<string, KDLValue> Props { get; }
+        public IReadOnlyList<KDLValue> Args { get; }
         public KDLDocument? Child { get; }
 
         /**
@@ -46,6 +55,13 @@ namespace KdlDotNet
 
         internal void WriteKDLPretty(StreamWriter writer, int depth, PrintConfig printConfig)
         {
+            if (Type != null)
+            {
+                writer.Write('(');
+                PrintUtil.WriteStringQuotedAppropriately(writer, Type, true, printConfig);
+                writer.Write(')');
+            }
+
             PrintUtil.WriteStringQuotedAppropriately(writer, Identifier, true, printConfig);
             if (Args.Count > 0 || Props.Count > 0 || Child != null)
             {
@@ -98,14 +114,14 @@ namespace KdlDotNet
         }
 
         public override string ToString()
-            => $"KDLNode{{identifier={Identifier}, props={string.Join(",", Props)}, args={string.Join(",", Args)}, child=}}";
+            => $"KDLNode{{identifier={Identifier}, type={Type}, props={string.Join(",", Props)}, args={string.Join(",", Args)}, child=}}";
 
         public override bool Equals(object obj)
         {
             if (!(obj is KDLNode other))
                 return false;
 
-            return Identifier == other.Identifier && Props.SequenceEqual(other.Props) && Args.SequenceEqual(other.Args) && Equals(Child, other.Child);
+            return Identifier == other.Identifier && Type == other.Type && Props.SequenceEqual(other.Props) && Args.SequenceEqual(other.Args) && Equals(Child, other.Child);
         }
 
         public override int GetHashCode()
@@ -114,12 +130,19 @@ namespace KdlDotNet
             {
                 int hash = 17;
                 hash = hash * 23 + Identifier.GetHashCode();
-                foreach(var prop in Props)
+
+                if(Type != null)
+                    hash = hash * 23 + Type.GetHashCode();
+
+                foreach (var prop in Props)
                     hash = hash * 23 + prop.GetHashCode();
+
                 foreach (var arg in Args)
                     hash = hash * 23 + arg.GetHashCode();
+
                 if(Child != null)
                     hash = hash * 23 + Child.GetHashCode();
+
                 return hash;
             }
         }
