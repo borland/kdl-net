@@ -30,8 +30,10 @@ namespace KdlDotNetTests
 
             if(outputText != generatedOutput)
             {
-                Console.WriteLine("Failure: B64 expected:\n{0}\nactual:\n{1}",
-                    Encoding.UTF8.GetBytes(outputText).ToHexString(), Encoding.UTF8.GetBytes(generatedOutput).ToHexString());
+                Console.WriteLine("Failure: input:\n{0}\n expected:\n{1}\nactual:\n{2}",
+                    Encoding.UTF8.GetBytes(inputText).ToHexString(),
+                    Encoding.UTF8.GetBytes(outputText).ToHexString(), 
+                    Encoding.UTF8.GetBytes(generatedOutput).ToHexString());
 
                 // this is going to fail
                 Assert.AreEqual(outputText, generatedOutput);
@@ -57,22 +59,6 @@ namespace KdlDotNetTests
 
                 yield return new object[] { name, fullInputPath, fullOutputPath };
             }
-        }
-    }
-
-    public static class ByteArrayExtensions
-    {
-        public static string ToHexString(this IEnumerable<byte> bytes, char padWith = (char)0)
-        {
-            var hex = new StringBuilder();
-            foreach (byte b in bytes)
-            {
-                hex.AppendFormat("{0:X2}", b);
-                if (padWith != (char)0)
-                    hex.Append(padWith);
-            }
-
-            return hex.ToString();
         }
     }
 }

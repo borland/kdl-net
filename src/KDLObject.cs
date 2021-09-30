@@ -72,7 +72,7 @@ namespace KdlDotNet
 
         public override string ToString() => $"KDLString{{value='{Value}', type={Type}}}";
 
-        public override bool Equals(object obj) => obj is KDLString x && x.Value == Value;
+        public override bool Equals(object? obj) => obj is KDLString other && other.Value == Value;
 
         public override int GetHashCode() => Value.GetHashCode();
     }
@@ -83,6 +83,9 @@ namespace KdlDotNet
     public class KDLNull : KDLValue
     {
         public static KDLNull Instance { get; } = new KDLNull(null);
+
+        public static KDLNull From(string? type)
+            => type == null ? Instance : new KDLNull(type);
 
         private static readonly KDLString asKdlStr = KDLString.From("null");
 
@@ -102,7 +105,7 @@ namespace KdlDotNet
 
         public override string ToString() => $"KDLNull{{type={Type}}}";
 
-        public override bool Equals(object obj) => obj is KDLNull other && Type == other.Type;
+        public override bool Equals(object? obj) => obj is KDLNull other && Type == other.Type;
 
         public override int GetHashCode() => 0;
     }
@@ -334,7 +337,7 @@ namespace KdlDotNet
 
         public override string ToString() => $"KDLNumber{{value='{AsBasicString()}', type={Type}}}";
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
             => obj is KDLNumber other && other.storageType == storageType && other.storage == storage && other.Type == Type;
 
         public override int GetHashCode()
@@ -361,6 +364,11 @@ namespace KdlDotNet
             _ => null,
         };
 
+        public static KDLBoolean From(bool b, string? type = null)
+            => type == null ?
+                b ? True : False :
+                new KDLBoolean(b, type);
+
         public static KDLBoolean True { get; } = new KDLBoolean(true);
         public static KDLBoolean False { get; } = new KDLBoolean(false);
 
@@ -385,7 +393,7 @@ namespace KdlDotNet
 
         public override string ToString() => $"KDLBoolean{{value='{Value}', type={Type}}}";
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
             => obj is KDLBoolean other && other.Value == Value && Type == other.Type;
 
         public override int GetHashCode() => Value.GetHashCode();
@@ -406,12 +414,10 @@ namespace KdlDotNet
         public static KDLValue From(object o, string? type)
         {
             if (o == null)
-                return type == null ? KDLNull.Instance : new KDLNull(type);
+                return KDLNull.From(type);
 
             if (o is bool b)
-                return type == null ?
-                    b ? KDLBoolean.True : KDLBoolean.False :
-                    new KDLBoolean(b, type);
+                return KDLBoolean.From(b, type);
 
             if (o is int i)
                 return new KDLNumber(i, type: type);
@@ -461,13 +467,13 @@ namespace KdlDotNet
         public virtual bool IsNull => false;
 
         // we expect derived classes to override this
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
             => obj is KDLValue other && GetType() == other.GetType() && Type == other.Type;
 
         // derived classes must override this
         public override int GetHashCode() => GetType().GetHashCode() ^ Type?.GetHashCode() ?? 0;
 
-        public static bool operator == (KDLValue a, KDLValue b)
+        public static bool operator == (KDLValue? a, KDLValue? b)
         {
             if (a is null)
             {
@@ -481,6 +487,6 @@ namespace KdlDotNet
             return a.Equals(b);
         }
 
-        public static bool operator !=(KDLValue a, KDLValue b) => !(a == b);
+        public static bool operator !=(KDLValue? a, KDLValue? b) => !(a == b);
     }
 }

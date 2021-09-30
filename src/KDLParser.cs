@@ -291,15 +291,15 @@ namespace KdlDotNet
                 {
                     if ("true" == strVal)
                     {
-                        obj = KDLBoolean.True;
+                        obj = KDLBoolean.From(true, type);
                     }
                     else if ("false" == strVal)
                     {
-                        obj = KDLBoolean.False;
+                        obj = KDLBoolean.From(false, type);
                     }
                     else if ("null" == strVal)
                     {
-                        obj = new KDLNull(type);
+                        obj = KDLNull.From(type);
                     }
                     else
                     {
