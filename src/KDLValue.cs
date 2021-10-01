@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Numerics;
 
 #nullable enable
 
@@ -26,13 +27,16 @@ namespace KdlDotNet
                 return KDLBoolean.From(b, type);
 
             if (o is int i)
-                return new KDLNumber(i, type: type);
+                return KDLNumber.From(i, radix: 10, type: type);
 
             if (o is long l)
-                return new KDLNumber(l, type: type);
+                return KDLNumber.From(l, radix: 10, type: type);
 
             if (o is double d)
-                return new KDLNumber(d, type: type);
+                return KDLNumber.From(d, radix: 10, type: type);
+
+            if (o is BigInteger bi)
+                return KDLNumber.From(bi, radix: 10, type: type);
 
             if (o is string s)
                 return new KDLString(s, type);

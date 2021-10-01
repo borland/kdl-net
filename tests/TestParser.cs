@@ -171,7 +171,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseHexadecimal()
         {
-            var kdlNumber = new KDLNumber(0x0123456789abcdef);
+            var kdlNumber = KDLNumber.From(0x0123456789abcdef, radix: 16);
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x0123456789abcdef"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef"));
@@ -185,7 +185,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseOctal()
         {
-            var kdlNumber = new KDLNumber(342391); // this is 1234567 in octal
+            var kdlNumber = KDLNumber.From(342391, radix: 8); // this is 1234567 in octal
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o0123_4567"));
@@ -199,7 +199,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseBinary()
         {
-            var kdlNumber = new KDLNumber(6); // this is 110 in binary
+            var kdlNumber = KDLNumber.From(6, radix: 2); // this is 110 in binary
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01_10"));

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -9,11 +11,12 @@ using System.Text;
 namespace KdlDotNet
 {
     /** A KDL Number can be internally stored as either an int or double. This enum tells you the native storage type used by a given KDLNumber instance */
-    public enum KDLNumberType
+    public enum KDLNumberType : int
     {
         Int32,
         Int64,
-        Float64
+        Float64,
+        BigInteger
     }
 
     // used to pass context information from KDLParser.ParseNumber into KDLNumber.From to reduce duplicated logic
@@ -29,7 +32,7 @@ namespace KdlDotNet
      * Representation of a KDL number. Numbers may be base 16, 10, 8, or 2 as stored in the radix field. Base 10 numbers may
      * be fractional, but all others are limited to integers.
      */
-    public class KDLNumber : KDLValue // not a KDLValue<T> because of the way we share number storage. Consider splitting into KdlNumberInt, KdlNumberLong, etc subclasses
+    public abstract class KDLNumber : KDLValue
     {
         public static KDLNumber Zero(int radix) => Zero(radix, null);
 
@@ -41,24 +44,21 @@ namespace KdlDotNet
                 case 8:
                 case 10:
                 case 16:
-                    return new KDLNumber(0, radix, type);
+                    return new KDLNumberInt32(0, radix, type);
                 default:
                     throw new ArgumentException("Radix must be one of: [2, 8, 10, 16]", nameof(radix));
             }
         }
 
-        public static KDLNumber From(int value) => new KDLNumber(value);
-        public static KDLNumber From(int value, int radix, string? type) => new KDLNumber(value, radix, type);
+        public static KDLNumber From(int value, int radix = 10, string? type = null) => new KDLNumberInt32(value, radix, type);
 
-        public static KDLNumber From(long value) => new KDLNumber(value);
-        public static KDLNumber From(long value, int radix, string? type) => new KDLNumber(value, radix, type);
+        public static KDLNumber From(long value, int radix = 10, string? type = null) => new KDLNumberInt64(value, radix, type);
 
-        public static KDLNumber From(double value) => new KDLNumber(value);
-        public static KDLNumber From(double value, int radix, string? type) => new KDLNumber(value, radix, type);
+        public static KDLNumber From(double value, int radix = 10, string? type = null) => new KDLNumberDouble(value, radix, type);
 
-        public static KDLNumber? From(string val) => From(val, null);
+        public static KDLNumber From(BigInteger value, int radix = 10, string? type = null) => new KDLNumberBigInteger(value, radix, type);
 
-        public static KDLNumber? From(string val, string? type)
+        public static KDLNumber? From(string val, string? type = null)
         {
             if (val.Length == 0)
                 return null;
@@ -135,13 +135,34 @@ namespace KdlDotNet
 
                 try // the vast majority of numbers we are likely to see in a KDL file will be ints, so fast-path that
                 {
-                    return From(Convert.ToInt32(val, radix), radix, type);
+                    var int32 = Convert.ToInt32(val, radix);
+                    if (int32 < 0 && radix != 10)
+                        throw new OverflowException("can only have negative numbers in base 10; promote to Int64");
+
+                    return From(int32, radix, type);
                 }
                 catch (OverflowException) // fallback to int64 for bigger numbers
                 {
-                    return From(Convert.ToInt64(val, radix), radix, type);
+                    try
+                    {
+                        var int64 = Convert.ToInt64(val, radix);
+                        if (int64 < 0 && radix != 10)
+                            throw new OverflowException("can only have negative numbers in base 10; promote to BigInteger");
+                        return From(int64, radix, type);
+                    }
+                    catch (OverflowException) // final fallback to BigInteger
+                    {
+                        var numberStyle = radix switch
+                        {
+                            10 => NumberStyles.None,
+                            16 => NumberStyles.HexNumber,
+                            _ => throw new NotSupportedException($"KdlDotNet does not support base {radix} numbers larger than signed Int64")
+                        };
+                        // https://stackoverflow.com/a/2983770 - BigInteger will parse a negative number if it thinks the highest bit is set
+                        // this is not what we want; we don't support negative hex numbers
+                        return From(BigInteger.Parse("0" + val, numberStyle), radix, type);
+                    }
                 }
-                // NOTE if we have a number bigger than int64 we'll need to put in a BigInteger or something, but we don't support that at this point in time
             }
             catch (FormatException)
             {
@@ -149,73 +170,10 @@ namespace KdlDotNet
             }
         }
 
-        private readonly int radix;
-        private readonly Storage storage;
-        private readonly KDLNumberType storageType;
+        protected int radix;
+        // derived classes store value 
 
-        [StructLayout(LayoutKind.Explicit, Size = 8)]
-        struct Storage
-        {
-            [FieldOffset(0)]
-            public int int32Value;
-            [FieldOffset(0)]
-            public long int64Value;
-            [FieldOffset(0)]
-            public double doubleValue;
-
-            public override bool Equals(object obj) => obj is Storage other && this == other;
-
-            public override int GetHashCode() => int64Value.GetHashCode();
-
-            public static bool operator ==(Storage a, Storage b) => a.int64Value == b.int64Value; // covers all the bits so should be good
-
-            public static bool operator !=(Storage a, Storage b) => !(a == b);
-        }
-
-        public KDLNumber(int value, int radix = 10, string? type = null) : base(type)
-        {
-            this.radix = radix;
-            this.storage.int32Value = value;
-            this.storageType = KDLNumberType.Int32;
-        }
-
-        public KDLNumber(long value, int radix = 10, string? type = null) : base(type)
-        {
-            this.radix = radix;
-            this.storage.int64Value = value;
-            this.storageType = KDLNumberType.Int64;
-        }
-
-        public KDLNumber(double value, int radix = 10, string? type = null) : base(type)
-        {
-            this.radix = radix;
-            this.storage.doubleValue = value;
-            this.storageType = KDLNumberType.Float64;
-        }
-
-        public int AsInt() => storageType switch
-        {
-            KDLNumberType.Int32 => storage.int32Value,
-            KDLNumberType.Int64 => (int)storage.int64Value, // let the cast throw or truncate if the number is too big
-            KDLNumberType.Float64 => (int)storage.doubleValue, // let the cast throw or truncate if the number is too big
-            _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
-        };
-
-        public long AsLong() => storageType switch
-        {
-            KDLNumberType.Int32 => storage.int32Value,
-            KDLNumberType.Int64 => storage.int64Value, // let the cast throw or truncate if the number is too big
-            KDLNumberType.Float64 => (long)storage.doubleValue, // let the cast throw or truncate if the number is too big
-            _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
-        };
-
-        public double AsDouble() => storageType switch
-        {
-            KDLNumberType.Int32 => storage.int32Value,
-            KDLNumberType.Int64 => storage.int64Value, // let the cast throw or truncate if the number is too big
-            KDLNumberType.Float64 => storage.doubleValue,
-            _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
-        };
+        protected KDLNumber(int radix, string? type) : base(type) => this.radix = radix;
 
         public override KDLString AsString() => new KDLString(AsBasicString(), type: Type); // TODO radix on ToString?
 
@@ -223,13 +181,7 @@ namespace KdlDotNet
 
         public override KDLBoolean? AsBoolean() => null;
 
-        public string AsBasicString() => storageType switch
-        {
-            KDLNumberType.Int32 => storage.int32Value.ToString(),
-            KDLNumberType.Int64 => storage.int64Value.ToString(),
-            KDLNumberType.Float64 => storage.doubleValue.ToString(),
-            _ => throw new InvalidOperationException($"Unhandled storageType {storageType}")
-        };
+        public abstract string AsBasicString();
 
         // TODO this method is doesn't support ShouldRespectRadix yet
         protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
@@ -239,16 +191,104 @@ namespace KdlDotNet
 
         public override string ToString() => $"KDLNumber{{value='{AsBasicString()}', type={Type}}}";
 
+        // derived classes must implement Equals and HashCode
+    }
+
+    internal class KDLNumberInt32 : KDLNumber
+    {
+        int Value { get; }
+
+        public KDLNumberInt32(int value, int radix, string? type) : base(radix, type)
+            => Value = value;
+
+        // TODO radix
+        public override string AsBasicString() => Value.ToString();
+
         public override bool Equals(object? obj)
-            => obj is KDLNumber other && other.storageType == storageType && other.storage == storage && other.Type == Type;
+            => obj is KDLNumberInt32 other && other.radix == radix && other.Value == Value;
 
         public override int GetHashCode()
         {
             unchecked
             {
                 int hash = 17;
-                hash = hash * 23 + storageType.GetHashCode();
-                hash = hash * 23 + storage.GetHashCode();
+                hash = hash * 23 + radix.GetHashCode();
+                hash = hash * 23 + Value.GetHashCode();
+                return hash;
+            }
+        }
+    }
+
+    internal class KDLNumberInt64 : KDLNumber
+    {
+        long Value { get; }
+
+        public KDLNumberInt64(long value, int radix, string? type) : base(radix, type)
+            => Value = value;
+
+        // TODO radix
+        public override string AsBasicString() => Value.ToString();
+
+        public override bool Equals(object? obj)
+            => obj is KDLNumberInt64 other && other.radix == radix && other.Value == Value;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + radix.GetHashCode();
+                hash = hash * 23 + Value.GetHashCode();
+                return hash;
+            }
+        }
+    }
+
+    internal class KDLNumberDouble : KDLNumber
+    {
+        double Value { get; }
+
+        public KDLNumberDouble(double value, int radix, string? type) : base(radix, type)
+            => Value = value;
+
+        // TODO radix
+        public override string AsBasicString() => Value.ToString();
+
+        public override bool Equals(object? obj)
+            => obj is KDLNumberDouble other && other.radix == radix && other.Value == Value;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + radix.GetHashCode();
+                hash = hash * 23 + Value.GetHashCode();
+                return hash;
+            }
+        }
+    }
+
+    internal class KDLNumberBigInteger : KDLNumber
+    {
+        BigInteger Value { get; }
+
+        public KDLNumberBigInteger(BigInteger value, int radix, string? type) : base(radix, type)
+            => Value = value;
+
+        // TODO radix
+        public override string AsBasicString() => Value.ToString();
+
+        public override bool Equals(object? obj)
+            => obj is KDLNumberBigInteger other && other.radix == radix && other.Value == Value;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + radix.GetHashCode();
+                hash = hash * 23 + Value.GetHashCode();
                 return hash;
             }
         }
