@@ -35,5 +35,20 @@ namespace KdlDotNetTests
             Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
         }
 
+        [TestMethod]
+        public void HexInt()
+        {
+            var input = HexStringToByteArray("6E6F646520307861626364656631323334353637383930");
+
+            var output = HexStringToByteArray("6E6F64652031323337393831333831323137373839333532300A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
+
     }
 }
