@@ -95,21 +95,35 @@ namespace KdlDotNetTests
             Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
         }
 
+        [TestMethod]
+        public void PropFloatType()
+        {
+            var input = HexStringToByteArray("6E6F6465206B65793D287479706529322E354531300A");
 
-        //[TestMethod]
-        //public void PropFloatType()
-        //{
-        //    var input = HexStringToByteArray("6E6F6465206B65793D287479706529322E354531300A");
+            var output = HexStringToByteArray("6E6F6465206B65793D287479706529322E35452B31300A");
 
-        //    var output = HexStringToByteArray("6E6F6465206B65793D287479706529322E35452B31300A");
+            var parser = new KDLParser();
 
-        //    var parser = new KDLParser();
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
 
-        //    var doc = parser.Parse(new MemoryStream(input));
-        //    var generatedOutput = doc.ToKDLPretty(PrintConfig);
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
 
-        //    Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
-        //}
+        [TestMethod]
+        public void NoDecimalExponent()
+        {
+            var input = HexStringToByteArray("6E6F64652031653130");
+
+            var output = HexStringToByteArray("6E6F64652031452B31300A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
 
         [TestMethod]
         public void AllEscapes()

@@ -285,10 +285,11 @@ namespace KdlDotNet
         // can't have floating point numbers in bases other than 10
         public override string AsBasicString(int radix = 10)
         {
-            if(Flags.HasFlag(KDLNumberParseFlags.HasScientificNotation))
+            if (Flags.HasFlag(KDLNumberParseFlags.HasScientificNotation))
             {
+                var format = Flags.HasFlag(KDLNumberParseFlags.HasDecimalPoint) ? "E1" : "E0";
                 // "E1" in C# makes it output "1.0E-010", which is better than the default "1E-10" but not quite the "1.0E-10" that we are looking for
-                return Value.ToString("E1").Replace("E-0","E-");
+                return Value.ToString(format).Replace("E-0", "E-").Replace("E+0", "E+");
             } 
             // else all KDL floating point numbers must have a decimal point (e.g. 1.0 is output instead of 1)
             return Value.ToString("0.0");
