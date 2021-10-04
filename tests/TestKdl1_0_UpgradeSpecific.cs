@@ -50,5 +50,50 @@ namespace KdlDotNetTests
             Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
         }
 
+        [TestMethod]
+        public void NegativeFloat()
+        {
+            var input = HexStringToByteArray("6E6F646520312E30652D3130");
+
+            var output = HexStringToByteArray("6E6F646520312E30452D31300A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
+
+        //[TestMethod]
+        //public void PropFloatType()
+        //{
+        //    var input = HexStringToByteArray("6E6F6465206B65793D287479706529322E354531300A");
+
+        //    var output = HexStringToByteArray("6E6F6465206B65793D287479706529322E35452B31300A");
+
+        //    var parser = new KDLParser();
+
+        //    var doc = parser.Parse(new MemoryStream(input));
+        //    var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+        //    Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        //}
+
+        [TestMethod]
+        public void AllEscapes()
+        {
+            var input = HexStringToByteArray("6E6F646520225C225C5C5C2F5C625C665C6E5C725C74220A");
+
+            var output = HexStringToByteArray("6E6F646520225C225C5C2F5C625C665C6E5C725C74220A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
+
     }
 }

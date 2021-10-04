@@ -251,8 +251,14 @@ namespace KdlDotNet
         public KDLNumberDouble(double value, int radix, string? type) : base(radix, type)
             => Value = value;
 
-        // TODO radix
-        public override string AsBasicString() => Value.ToString();
+        // can we have a non-base10 double? I don't think so
+        public override string AsBasicString()
+        {
+            var str = Value.ToString();
+
+            // KDL spec says 1E-10 should print as 1.0E-10
+            return str.Replace("1E", "1.0E");
+        }
 
         public override bool Equals(object? obj)
             => obj is KDLNumberDouble other && other.radix == radix && other.Value == Value;
