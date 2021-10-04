@@ -340,15 +340,15 @@ namespace KdlDotNetTests
                 "node(r)" => new KDLNode("r"),
                 "node(rrrr)" => new KDLNode("rrrr"),
                 "node(a) arg" => new KDLNode("a", args: new[] { new KDLString("arg") }),
-                "node(a) key=val" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }),
-                "node(a) key=true" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLBoolean.True }),
-                "node(a) key=val arg" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg") }),
-                "node(a) key=val arg\"" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg\"") }),
-                "node(a) true false null" => new KDLNode("a", args: new IKDLValue[] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
+                "node(a) key=val" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }),
+                "node(a) key=true" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = KDLBoolean.True }),
+                "node(a) key=val arg" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg") }),
+                "node(a) key=val arg\"" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val") }, args: new[] { new KDLString("arg\"") }),
+                "node(a) true false null" => new KDLNode("a", args: new KDLValue[] { KDLBoolean.True, KDLBoolean.False, KDLNull.Instance }),
                 "node(a) arg2" => new KDLNode("a", args: new[] { new KDLString("arg2") }),
-                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = new KDLString("val2") }),
+                "node(a) key=val2" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = new KDLString("val2") }),
                 "node(a) {b}" => new KDLNode("a", child: new KDLDocument(new KDLNode("b"))),
-                "node(a) key=null arg {b}" => new KDLNode("a", props: new Dictionary<string, IKDLValue> { ["key"] = KDLNull.Instance }, args: new[] { new KDLString("arg") }, child: new KDLDocument(new KDLNode("b"))),
+                "node(a) key=null arg {b}" => new KDLNode("a", props: new Dictionary<string, KDLValue> { ["key"] = KDLNull.Instance }, args: new[] { new KDLString("arg") }, child: new KDLDocument(new KDLNode("b"))),
                 "node(a) {}" => new KDLNode("a", child: KDLDocument.Empty),
                 null => null,
                 _ => throw new ArgumentException($"Unhandled placeholder {expectedResultPlaceholder}")
@@ -368,83 +368,49 @@ namespace KdlDotNetTests
             }
         }
 
-        [DataRow("0")]
-        [DataRow("-0")]
-        [DataRow("1")]
-        [DataRow("01")]
-        [DataRow("10")]
-        [DataRow("1_0")]
-        [DataRow("-10")]
-        [DataRow("+10")]
-        [DataRow("1.0")]
-        [DataRow("9223372036854775807")]
-        [DataRow("1e10")]
-        [DataRow("1e+10")]
-        [DataRow("1E+10")]
-        [DataRow("1e-10")]
-        [DataRow("-1e-10")]
-        [DataRow("+1e-10")]
-        [DataRow("0x0")]
-        [DataRow("0xFF")]
-        [DataRow("0xF_F")]
-        [DataRow("0o0")]
-        [DataRow("0o7")]
-        [DataRow("0o77")]
-        [DataRow("0o7_7")]
-        [DataRow("0b0")]
-        [DataRow("0b1")]
-        [DataRow("0b10")]
-        [DataRow("0b1_0")]
-        [DataRow("A")]
-        [DataRow("_")]
-        [DataRow("_1")]
-        [DataRow("+_1")]
-        [DataRow("0xRR")]
-        [DataRow("0o8")]
-        [DataRow("0b2")]
+        public static IEnumerable<object?[]> TestParseNumberGetData() => new[] {
+            new object[] { "0", KDLNumber.From(0) },
+            new object[] { "-0", KDLNumber.From(0) },
+            new object[] { "1", KDLNumber.From(1) },
+            new object[] { "01", KDLNumber.From(1) },
+            new object[] { "10", KDLNumber.From(10) },
+            new object[] { "1_0", KDLNumber.From(10) },
+            new object[] { "-10", KDLNumber.From(-10) },
+            new object[] { "+10", KDLNumber.From(10) },
+            new object[] { "1.0", KDLNumber.From(1.0) },
+            new object[] { "9223372036854775807", KDLNumber.From(9223372036854775807) },
+            new object[] { "1e10", KDLNumber.From(1e10) },
+            new object[] { "1e+10", KDLNumber.From(1e10) },
+            new object[] { "1E+10", KDLNumber.From(1e10) },
+            new object[] { "1e-10", KDLNumber.From(1e-10) },
+            new object[] { "-1e-10", KDLNumber.From(-1e-10) },
+            new object[] { "+1e-10", KDLNumber.From(1e-10) },
+            new object[] { "0x0", KDLNumber.From(0, 16) },
+            new object[] { "0xFF", KDLNumber.From(255, 16) },
+            new object[] { "0xF_F", KDLNumber.From(255, 16) },
+            new object[] { "0o0", KDLNumber.From(0, 8) },
+            new object[] { "0o7", KDLNumber.From(7, 8) },
+            new object[] { "0o77", KDLNumber.From(63, 8) },
+            new object[] { "0o7_7", KDLNumber.From(63, 8) },
+            new object[] { "0b0", KDLNumber.From(0, 2) },
+            new object[] { "0b1", KDLNumber.From(1, 2) },
+            new object[] { "0b10", KDLNumber.From(2, 2) },
+            new object[] { "0b1_0", KDLNumber.From(2, 2) },
+            new object?[] { "A", null },
+            new object?[] { "_", null },
+            new object?[] { "_1", null },
+            new object?[] { "+_1", null },
+            new object?[] { "0xRR", null },
+            new object?[] { "0o8", null },
+            new object?[] { "0b2", null },
+        };
+
         [DataTestMethod]
-        public void TestParseNumber(string input)
+        [DynamicData(nameof(TestParseNumberGetData), DynamicDataSourceType.Method)]
+        public void TestParseNumber(string input, KDLNumber expectedResult)
         {
             var context = TestUtil.StrToContext(input);
-            var expectedResult = input switch { // can't have complex data in a DataRow attribute in C#
-               "0" => KDLNumber.From(0),
-               "-0" => KDLNumber.From(0),
-               "1" => KDLNumber.From(1),
-               "01" => KDLNumber.From(1),
-               "10" => KDLNumber.From(10),
-               "1_0" => KDLNumber.From(10),
-               "-10" => KDLNumber.From(-10),
-               "+10" => KDLNumber.From(10),
-               "1.0" => KDLNumber.From(1.0),
-                "9223372036854775807" => KDLNumber.From(9223372036854775807),
-               "1e10" => KDLNumber.From(1e10),
-               "1e+10" => KDLNumber.From(1e10),
-               "1E+10" => KDLNumber.From(1e10),
-               "1e-10" => KDLNumber.From(1e-10),
-               "-1e-10" => KDLNumber.From(-1e-10),
-               "+1e-10" => KDLNumber.From(1e-10),
-               "0x0" => KDLNumber.From(0),
-               "0xFF" => KDLNumber.From(255),
-               "0xF_F" => KDLNumber.From(255),
-               "0o0" => KDLNumber.From(0),
-               "0o7" => KDLNumber.From(7),
-               "0o77" => KDLNumber.From(63),
-               "0o7_7" => KDLNumber.From(63),
-               "0b0" => KDLNumber.From(0),
-               "0b1" => KDLNumber.From(1),
-               "0b10" => KDLNumber.From(2),
-               "0b1_0" => KDLNumber.From(2),
-               "A" => null,
-               "_" => null,
-               "_1" => null,
-               "+_1" => null,
-               "0xRR" => null,
-               "0o8" => null,
-               "0b2" => null,
-                null => null,
-                _ => throw new ArgumentException($"Unhandled placeholder {input}")
-            };
-
+            
             try
             {
                 KDLNumber val = TestUtil.Parser.ParseNumber(context);
@@ -515,7 +481,7 @@ namespace KdlDotNetTests
         public void TestParseValue(string input, string? expectedResultPlaceholder)
         {
             var context = TestUtil.StrToContext(input);
-            IKDLValue? expectedResult = expectedResultPlaceholder switch {
+            KDLValue? expectedResult = expectedResultPlaceholder switch {
                 "number(0)" => KDLNumber.From(0),
                 "number(10)" => KDLNumber.From(10),
                 "number(-10)" => KDLNumber.From(-10),
@@ -535,7 +501,7 @@ namespace KdlDotNetTests
 
             try
             {
-                IKDLValue val = TestUtil.Parser.ParseValue(context);
+                KDLValue val = TestUtil.Parser.ParseValue(context);
                 Assert.AreEqual(expectedResult, val);
             }
             catch (KDLParseException e)

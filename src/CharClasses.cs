@@ -46,15 +46,18 @@ namespace KdlDotNet
          */
         public static bool IsValidBareIdChar(int c)
         {
+            if (c <= 0x20 || c > 0x10FFFF)
+                return false;
+
             switch (c)
             {
-                case '\n':
-                case '\u000C':
-                case '\r':
                 case '\u0085':
                 case '\u2028':
                 case '\u2029':
                 case '\\':
+                case '/':
+                case '(':
+                case ')':
                 case '{':
                 case '}':
                 case '<':
@@ -65,8 +68,6 @@ namespace KdlDotNet
                 case '=':
                 case ',':
                 case '"':
-                case '\u0009':
-                case '\u0020':
                 case '\u00A0':
                 case '\u1680':
                 case '\u2000':
@@ -95,7 +96,32 @@ namespace KdlDotNet
          * @param c the character to check
          * @return true if the character is valid, false otherwise
          */
-        public static bool IsValidBareIdStart(int c) => !IsValidDecimalChar(c) && IsValidBareIdChar(c);
+        public static bool IsValidBareIdStart(int c)
+             => !IsValidDecimalChar(c) && IsValidBareIdChar(c);
+
+        /**
+         * Check if a string is a valid bare identifier
+         *
+         * @param string the string to check
+         * @return true if the string is a valid bare id, false otherwise
+         */
+        public static bool IsValidBareId(string str)
+        {
+            if (str == "")
+                return false;
+
+            var validBareIdStart = IsValidBareIdStart(str[0]);
+            if (str.Length == 1 || !validBareIdStart)
+                return validBareIdStart;
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (!IsValidBareIdChar(str[i]))
+                    return false;
+            }
+
+            return true;
+        }
 
         /**
          * Check if the character is a valid decimal digit
@@ -103,7 +129,8 @@ namespace KdlDotNet
          * @param c the character to check
          * @return true if the character is valid, false otherwise
          */
-        public static bool IsValidDecimalChar(int c) => ('0' <= c && c <= '9');
+        public static bool IsValidDecimalChar(int c)
+            => ('0' <= c && c <= '9');
 
         /**
          * Check if the character is a valid hexadecimal digit
@@ -149,7 +176,8 @@ namespace KdlDotNet
          * @param c the character to check
          * @return true if the character is valid, false otherwise
          */
-        public static bool IsValidOctalChar(int c) => ('0' <= c && c <= '7');
+        public static bool IsValidOctalChar(int c)
+            => ('0' <= c && c <= '7');
 
         /**
          * Check if the character is a valid binary digit
@@ -157,7 +185,8 @@ namespace KdlDotNet
          * @param c the character to check
          * @return true if the character is valid, false otherwise
          */
-        public static bool IsValidBinaryChar(int c) => (c == '0' || c == '1');
+        public static bool IsValidBinaryChar(int c)
+            => (c == '0' || c == '1');
 
         /**
          * Check if the character is contained in one of the three literal values: true, false, and null
@@ -247,9 +276,13 @@ namespace KdlDotNet
          * @return true if the character is printable unescaped, false otherwise
          */
         public static bool IsPrintableAscii(int c)
-        {
-            return ' ' <= c && c <= '~' && c != '/' && c != '"';
-        }
+            => (' ' <= c && c <= '~');
+
+        public static bool IsNonAscii(int c)
+            => c > 127;
+
+        public static bool MustEscape(int c)
+            => c == '\\' || c == '"';
 
         private static readonly string ESC_BACKSLASH = "\\\\";
         private static readonly string ESC_BACKSPACE = "\\b";
@@ -266,7 +299,8 @@ namespace KdlDotNet
          * @param c the character to check
          * @return An Optional wrapping the escape sequence string if the character needs to be escaped, or false otherwise
          */
-        public static string? GetCommonEscape(int c) =>  c switch {
+        public static string? GetCommonEscape(int c) => c switch
+        {
             '\\' => ESC_BACKSLASH,
             '\b' => ESC_BACKSPACE,
             '\n' => ESC_NEWLINE,
@@ -278,12 +312,30 @@ namespace KdlDotNet
             _ => null,
         };
 
+        public static bool IsCommonEscape(int c)
+        {
+            switch (c)
+            {
+                case '\\':
+                case '\b':
+                case '\n':
+                case '\f':
+                case '\t':
+                case '\r':
+                case '"':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /**
          * Get the escape sequence for any character
          *
          * @param c the character to check
          * @return The escape sequence string
          */
-        public static string GetEscapeIncludingUnicode(int c) => GetCommonEscape(c) ?? string.Format("\\u{0:x}", c);
+        public static string GetEscapeIncludingUnicode(int c)
+            => GetCommonEscape(c) ?? $"\\u{c:x}";
     }
 }

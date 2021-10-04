@@ -15,31 +15,31 @@ namespace KdlDotNetTests
         static KDLDocument doc() => KDLDocument.Empty;
         static KDLDocument doc(params KDLNode[] nodes) => new KDLDocument(nodes);
 
-        static List<IKDLValue> list(params IKDLValue[] values) => new List<IKDLValue>(values);
+        static List<KDLValue> list(params KDLValue[] values) => new List<KDLValue>(values);
         static List<object> list(params object[] values) => new List<object>(values);
 
         static Dictionary<string, object> dict(string key, object value) => new Dictionary<string, object>(1) { [key] = value };
 
         static KDLNode node(string ident) => new KDLNode(ident);
-        static KDLNode node(string ident, params KDLNode[] nodes) => new KDLNode(ident, child: doc(nodes));
+        static KDLNode node(string ident, params KDLNode[] nodes) => new KDLNode(ident, (string?)null, child: doc(nodes));
 
         static KDLNode node(string ident, Dictionary<string, object> props)
             => node(ident, args: new List<object>(0), props: props);
 
         static KDLNode node(string ident, List<object> args, Dictionary<string, object> props)
             => new KDLNode(
-                ident, 
+                ident, null,
                 args: args.Select(a => KDLValue.From(a)).ToList(),
                 props: props.ToDictionary(
                     keySelector: (kv) => kv.Key,
                     elementSelector: (kv) => KDLValue.From(kv.Value)),
                 child: null);
 
-        static KDLNode node(string ident, List<IKDLValue> args)
-            => new KDLNode(ident, args: args, child: null);
+        static KDLNode node(string ident, List<KDLValue> args)
+            => new KDLNode(ident, (string?)null, args: args, child: null);
 
         static KDLNode node(string ident, List<object> args, params KDLNode[] nodes)
-            => new KDLNode(ident, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
+            => new KDLNode(ident, (string?)null, args: args.Select(a => KDLValue.From(a)).ToList(), child: nodes.Length > 0 ? doc(nodes) : null);
 
 #pragma warning restore
 
@@ -171,7 +171,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseHexadecimal()
         {
-            var kdlNumber = new KDLNumber(0x0123456789abcdef);
+            var kdlNumber = KDLNumber.From(0x0123456789abcdef, radix: 16);
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x0123456789abcdef"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0x01234567_89abcdef"));
@@ -185,7 +185,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseOctal()
         {
-            var kdlNumber = new KDLNumber(342391); // this is 1234567 in octal
+            var kdlNumber = KDLNumber.From(342391, radix: 8); // this is 1234567 in octal
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o01234567"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0o0123_4567"));
@@ -199,7 +199,7 @@ namespace KdlDotNetTests
         [TestMethod]
         public void ParseBinary()
         {
-            var kdlNumber = new KDLNumber(6); // this is 110 in binary
+            var kdlNumber = KDLNumber.From(6, radix: 2); // this is 110 in binary
 
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b0110"));
             Assert.AreEqual(doc(node("node", list(kdlNumber))), parser.Parse("node 0b01_10"));
@@ -387,8 +387,8 @@ namespace KdlDotNetTests
                 parser.Parse("\"!@#$@$%Q#$%~@!40\" \"1.2.3\" \"!!!!!\"=true"));
 
             Assert.AreEqual(
-                doc(node("foo123~!@#$%^&*.:'|/?+", list("weeee"))), 
-                parser.Parse("foo123~!@#$%^&*.:'|/?+ \"weeee\""));
+                doc(node("foo123~!@#$%^&*.:'|?+", list("weeee"))), 
+                parser.Parse("foo123~!@#$%^&*.:'|?+ \"weeee\""));
         }
     }
 }

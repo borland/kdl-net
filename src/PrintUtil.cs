@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 #nullable enable
@@ -13,11 +15,6 @@ namespace KdlDotNet
  */
     public static class PrintUtil
     {
-        private static readonly Regex ValidBareId = new Regex(
-            "^[^\n\r\u000C\u0085\u2028\u2029{}<>;\\\\\\[\\]=,\"\u0009\u0020\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u30000-9]" +
-            "[^\n\r\u000C\u0085\u2028\u2029{}<>;\\\\\\[\\]=,\"\u0009\u0020\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000]*$"
-        );
-
         // throws IOException
         public static void WriteStringQuotedAppropriately(
             StreamWriter writer,
@@ -31,75 +28,32 @@ namespace KdlDotNet
                 return;
             }
 
-            int hashDepth = 0;
-            if (!printConfig.EscapeNonPrintableAscii)
+
+            if (bareAllowed && IsValidBareId(str))
             {
-                int quoteAt = str.IndexOf('"');
-                while (quoteAt >= 0)
-                {
-                    int hashesNeeded = 1;
-                    for (int i = quoteAt + 1; i < str.Length && str[i] == '#'; i++)
-                    {
-                        hashesNeeded++;
-                    }
-                    hashDepth = Math.Max(hashDepth, hashesNeeded);
-                    quoteAt = str.IndexOf('"', quoteAt + 1);
-                }
+                writer.Write(str);
+                return;
             }
 
-            if (hashDepth == 0 && !str.Contains("\\") && !str.Contains("\""))
+            writer.Write('"');
+            for (int i = 0; i < str.Length; i++)
             {
-                if (bareAllowed && ValidBareId.IsMatch(str))
+                int c = str[i];
+                if (printConfig.RequiresEscape(c))
                 {
-                    writer.Write(str);
+                    writer.Write(GetEscapeIncludingUnicode(c));
                 }
                 else
                 {
-                    writer.Write('"');
-                    for (int i = 0; i < str.Length; i++)
-                    {
-                        char c = str[i];
-                        if (IsPrintableAscii(c))
-                        {
-                            writer.Write(c);
-                        }
-                        else if (c == '\n' && printConfig.EscapeNewLines)
-                        {
-                            writer.Write("\\n");
-                        }
-                        else if (printConfig.EscapeNonPrintableAscii)
-                        {
-                            writer.Write(GetEscapeIncludingUnicode(c));
-                        }
-                        else if (printConfig.EscapeCommon)
-                        {
-                            writer.Write(GetCommonEscape(c) ?? c.ToString());
-                        }
-                        else
-                        {
-                            writer.Write(c);
-                        }
-                    }
-                    writer.Write('"');
+                    // write codepoint rather than integer value
+                    if (c < char.MaxValue) // char.ConvertFromUtf32 allocates a temp string for multi-char codepoints; avoid for smaller chars
+                        writer.Write((char)c);
+                    else
+                        writer.Write(char.ConvertFromUtf32(c)); // would fail for codepoints > 32 bits but I'm not sure we have any of those
                 }
             }
-            else
-            {
-                writer.Write('r');
-                for (int i = 0; i < hashDepth; i++)
-                {
-                    writer.Write('#');
-                }
+            writer.Write('"');
 
-                writer.Write('"');
-                writer.Write(str);
-                writer.Write('"');
-
-                for (int i = 0; i < hashDepth; i++)
-                {
-                    writer.Write('#');
-                }
-            }
         }
     }
 
@@ -110,45 +64,147 @@ namespace KdlDotNet
     public class PrintConfig
     {
         public static PrintConfig PrettyDefault => new PrintConfig();
-        public static PrintConfig RawDefault => new PrintConfig(indent: 0, printEmptyChildren: false, escapeNewLines: true);
+        public static PrintConfig RawDefault => new PrintConfig(indent: 0, escapeNonAscii: false, printEmptyChildren: false);
 
-        public bool RequireSemicolons { get; }
-        public string NewLine { get; }
-        public int Indent { get; }
-        public char IndentChar { get; }
-        public char ExponentChar { get; }
-        public bool EscapeCommon { get; }
+        /** 
+         * Check if character has been set to force strings containing it to be escaped 
+         */
+        public HashSet<int>? ForceEscapeChars { get; }
+
         public bool EscapeNonPrintableAscii { get; }
-        public bool PrintEmptyChildren { get; }
-        public bool PrintNullArgs { get; }
-        public bool PrintNullProps { get; }
-        public bool EscapeNewLines { get; }
 
-        public PrintConfig(bool requireSemicolons = false, string newline = "\n", bool escapeCommon = true, bool escapeNonAscii = false, bool escapeNewLines = false, int indent = 4, char indentChar = ' ', char exponentChar = 'E', bool printEmptyChildren = true, bool printNullArgs = true, bool printNullProps = true)
+        public bool EscapeLinespace { get; }
+        public bool EscapeNonAscii { get; }
+        public bool EscapeCommon { get; }
+
+        /**
+         * @return true if each node should be terminated with a ';', false if semicolons will be omitted entirely
+         */
+        public bool RequireSemicolons { get; }
+
+        /**
+         * @return true if each number should be printed with its specified radix, false if they should be printed just base-10
+         */
+        public bool RespectRadix { get; }
+
+        /**
+         * @return get the string used to print newlines
+         */
+        public string NewLine { get; }
+
+        /**
+         * @return how many getIndentChar() characters lines will be indented for each level they are away from the root.
+         *         If 0, no indentation will be performed
+         */
+        public int Indent { get; }
+
+        /**
+         * @return the character used to indent lines
+         */
+        public char IndentChar { get; }
+
+        /**
+         * @return the character used to indicate the beginning of the exponent part of floating point numbers
+         */
+        public char ExponentChar { get; }
+
+        /**
+         * @return true if empty children should be printed with braces containing no nodes, false if they shouldn't be printed
+         */
+        public bool PrintEmptyChildren { get; }
+
+        /**
+         * @return true if node arguments with the literal value 'null' will be printed
+         */
+        public bool PrintNullArgs { get; }
+
+        /**
+         * @return true if node properties with the literal value 'null' will be printed
+         */
+        public bool PrintNullProps { get; }
+
+        public PrintConfig(
+            bool escapeNonPrintableAscii = true,
+            bool escapeLinespace = true,
+            bool escapeNonAscii = false,
+            bool escapeCommon = true,
+            bool requireSemicolons = false,
+            bool respectRadix = true,
+            string newLine = "\n",
+            int indent = 4,
+            char indentChar = ' ',
+            char exponentChar = 'E',
+            bool printEmptyChildren = true,
+            bool printNullArgs = true,
+            bool printNullProps = true,
+            IEnumerable<int>? forceEscapeChars = null)
         {
             if (exponentChar != 'e' && exponentChar != 'E')
-                throw new ArgumentException("Exponent character must be either 'e' or 'E'");
+                throw new ArgumentException("Exponent character must be either 'e' or 'E'", nameof(exponentChar));
 
-            for (int i = 0; i < newline.Length; i++)
-            {
-                if (!IsUnicodeLinespace(newline[i]))
-                    throw new ArgumentException("All characters in specified 'newline' must be unicode vertical space");
-            }
+            if (newLine.Any(c => !IsUnicodeLinespace(c)))
+                throw new ArgumentException("All characters in specified 'newline' must be unicode vertical space", nameof(newLine));
 
             if (!IsUnicodeWhitespace(indentChar))
-                throw new ArgumentException("Indent character must be unicode whitespace");
+                throw new ArgumentException("Indent character must be unicode whitespace", nameof(indentChar));
 
+            EscapeNonPrintableAscii = escapeNonPrintableAscii;
+            EscapeLinespace = escapeLinespace;
+            EscapeNonAscii = escapeNonAscii;
+            EscapeCommon = escapeCommon;
             RequireSemicolons = requireSemicolons;
-            NewLine = newline;
+            RespectRadix = respectRadix;
+            NewLine = newLine;
             Indent = indent;
             IndentChar = indentChar;
             ExponentChar = exponentChar;
-            EscapeCommon = escapeCommon;
-            EscapeNonPrintableAscii = escapeNonAscii;
             PrintEmptyChildren = printEmptyChildren;
             PrintNullArgs = printNullArgs;
             PrintNullProps = printNullProps;
-            EscapeNewLines = escapeNewLines;
+
+            if (forceEscapeChars != null)
+                ForceEscapeChars = new HashSet<int>(forceEscapeChars);
         }
+
+        public bool RequiresEscape(int c)
+        {
+            if (ShouldForceEscape(c))
+            {
+                return true;
+            }
+            else if (MustEscape(c))
+            {
+                return true;
+            }
+            else if (EscapeLinespace && IsUnicodeLinespace(c))
+            {
+                return true;
+            }
+            else if (EscapeNonPrintableAscii && !IsNonAscii(c) && !IsPrintableAscii(c))
+            {
+                return true;
+            }
+            else if (EscapeNonAscii && IsNonAscii(c))
+            {
+                return true;
+            }
+            else if (EscapeCommon && IsCommonEscape(c))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        /**
+        * Check if character has been set to force strings containing it to be escaped
+        *
+        * @param c the character to check
+        * @return true if the character should be escaped, false otherwise.
+        */
+        public bool ShouldForceEscape(int c)
+            => ForceEscapeChars?.Contains(c) ?? false;
     }
 }
