@@ -126,11 +126,11 @@ namespace KdlDotNet
             {
                 if (radix == 10 && flags.HasFlag(KDLNumberParseFlags.HasDecimalPoint))
                 {
-                    return From(double.Parse(val), radix, type); // deliberate throw on parse so we can catch formatException
+                    return new KDLNumberDouble(double.Parse(val), flags, radix, type); // deliberate throw on parse so we can catch formatException
                 }
                 else if (radix == 10 && flags.HasFlag(KDLNumberParseFlags.HasScientificNotation))
                 {
-                    return From((double)decimal.Parse(val, System.Globalization.NumberStyles.Float), radix, type); // the literal 1e10 is double in C#, so we use that
+                    return new KDLNumberDouble((double)decimal.Parse(val, System.Globalization.NumberStyles.Float), flags, radix, type); // the literal 1e10 is double in C#, so we use that
                 }
 
                 try // the vast majority of numbers we are likely to see in a KDL file will be ints, so fast-path that
@@ -270,13 +270,29 @@ namespace KdlDotNet
 
     internal class KDLNumberDouble : KDLNumber
     {
+        KDLNumberParseFlags Flags { get; }
         double Value { get; }
 
-        public KDLNumberDouble(double value, int radix, string? type) : base(radix, type)
-            => Value = value;
+        public KDLNumberDouble(double value, int radix, string? type) : this(value, KDLNumberParseFlags.None, radix, type)
+        { }
+
+        internal KDLNumberDouble(double value, KDLNumberParseFlags flags, int radix, string? type) : base(radix, type)
+        {
+            Flags = flags;
+            Value = value;
+        }
 
         // can't have floating point numbers in bases other than 10
-        public override string AsBasicString(int radix = 10) => Value.ToString("0.0");
+        public override string AsBasicString(int radix = 10)
+        {
+            if(Flags.HasFlag(KDLNumberParseFlags.HasScientificNotation))
+            {
+                // "E1" in C# makes it output "1.0E-010", which is better than the default "1E-10" but not quite the "1.0E-10" that we are looking for
+                return Value.ToString("E1").Replace("E-0","E-");
+            } 
+            // else all KDL floating point numbers must have a decimal point (e.g. 1.0 is output instead of 1)
+            return Value.ToString("0.0");
+        }
 
         public override bool Equals(object? obj)
             => obj is KDLNumberDouble other && other.radix == radix && other.Value == Value;
