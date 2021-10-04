@@ -18,7 +18,7 @@ namespace KdlDotNetTests
     [TestClass]
     public class TestKdl1_0_UpgradeSpecific
     {
-        static readonly PrintConfig PrintConfig = new PrintConfig(); // TODO escapeLineSpace and radix
+        static readonly PrintConfig PrintConfig = new PrintConfig(escapeLinespace: true, respectRadix: false);
 
         [TestMethod]
         public void ArgFalseType()
@@ -64,6 +64,37 @@ namespace KdlDotNetTests
 
             Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
         }
+
+        [TestMethod]
+        public void NumericProp()
+        {
+            var input = HexStringToByteArray("6E6F64652070726F703D31302E30");
+
+            var output = HexStringToByteArray("6E6F64652070726F703D31302E300A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
+
+        [TestMethod]
+        public void Octal()
+        {
+            var input = HexStringToByteArray("6E6F646520306F3736353433323130");
+
+            var output = HexStringToByteArray("6E6F64652031363433343832340A");
+
+            var parser = new KDLParser();
+
+            var doc = parser.Parse(new MemoryStream(input));
+            var generatedOutput = doc.ToKDLPretty(PrintConfig);
+
+            Assert.AreEqual(Encoding.UTF8.GetString(output), generatedOutput);
+        }
+
 
         //[TestMethod]
         //public void PropFloatType()

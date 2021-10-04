@@ -14,7 +14,7 @@ namespace KdlDotNetTests
     [TestClass]
     public class TestRoundTrip
     {
-        static readonly PrintConfig PrintConfig = new PrintConfig(); // TODO escapeLineSpace and radix
+        static readonly PrintConfig PrintConfig = new PrintConfig(escapeLinespace: true, respectRadix: false);
 
         [DataTestMethod]
         [DynamicData(nameof(GetData), DynamicDataSourceType.Method)]
@@ -30,9 +30,12 @@ namespace KdlDotNetTests
 
             if(outputText != generatedOutput)
             {
-                Console.WriteLine("Failure: input:\n{0}\n expected:\n{1}\nactual:\n{2}",
+                Console.WriteLine("Failure: input:\n{0}\n{1}\n expected:\n{2}\n{3}\nactual:\n{4}\n{5}",
+                    inputText,
                     Encoding.UTF8.GetBytes(inputText).ToHexString(),
-                    Encoding.UTF8.GetBytes(outputText).ToHexString(), 
+                    outputText,
+                    Encoding.UTF8.GetBytes(outputText).ToHexString(),
+                    generatedOutput,
                     Encoding.UTF8.GetBytes(generatedOutput).ToHexString());
 
                 // this is going to fail

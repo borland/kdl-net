@@ -175,17 +175,43 @@ namespace KdlDotNet
 
         protected KDLNumber(int radix, string? type) : base(type) => this.radix = radix;
 
-        public override KDLString AsString() => new KDLString(AsBasicString(), type: Type); // TODO radix on ToString?
+        public override KDLString AsString() => new KDLString(AsBasicString(), type: Type);
 
         public override KDLNumber? AsNumber() => this;
 
         public override KDLBoolean? AsBoolean() => null;
 
-        public abstract string AsBasicString();
+        public abstract string AsBasicString(int radix = 10);
 
-        // TODO this method is doesn't support ShouldRespectRadix yet
         protected override void WriteKDLValue(StreamWriter writer, PrintConfig printConfig)
-            => writer.Write(AsBasicString());
+        {
+            if (printConfig.RespectRadix)
+            {
+                switch (radix)
+                {
+                    case 10:
+                        writer.Write(AsBasicString().Replace('E', printConfig.ExponentChar));
+                        break;
+                    case 2:
+                        writer.Write("0b");
+                        writer.Write(AsBasicString(radix));
+                        break;
+                    case 8:
+                        writer.Write("0o");
+                        writer.Write(AsBasicString(radix));
+                        break;
+                    case 16:
+                        writer.Write("0x");
+                        writer.Write(AsBasicString(radix));
+                        break;
+                }
+            }
+            else
+            {
+                writer.Write(AsBasicString().Replace('E', printConfig.ExponentChar));
+            }
+        }
+            
 
         public override bool IsNumber => true;
 
@@ -201,8 +227,7 @@ namespace KdlDotNet
         public KDLNumberInt32(int value, int radix, string? type) : base(radix, type)
             => Value = value;
 
-        // TODO radix
-        public override string AsBasicString() => Value.ToString();
+        public override string AsBasicString(int radix = 10) => Convert.ToString(Value, radix);
 
         public override bool Equals(object? obj)
             => obj is KDLNumberInt32 other && other.radix == radix && other.Value == Value;
@@ -226,8 +251,7 @@ namespace KdlDotNet
         public KDLNumberInt64(long value, int radix, string? type) : base(radix, type)
             => Value = value;
 
-        // TODO radix
-        public override string AsBasicString() => Value.ToString();
+        public override string AsBasicString(int radix = 10) => Convert.ToString(Value, radix);
 
         public override bool Equals(object? obj)
             => obj is KDLNumberInt64 other && other.radix == radix && other.Value == Value;
@@ -251,14 +275,8 @@ namespace KdlDotNet
         public KDLNumberDouble(double value, int radix, string? type) : base(radix, type)
             => Value = value;
 
-        // can we have a non-base10 double? I don't think so
-        public override string AsBasicString()
-        {
-            var str = Value.ToString();
-
-            // KDL spec says 1E-10 should print as 1.0E-10
-            return str.Replace("1E", "1.0E");
-        }
+        // can't have floating point numbers in bases other than 10
+        public override string AsBasicString(int radix = 10) => Value.ToString("0.0");
 
         public override bool Equals(object? obj)
             => obj is KDLNumberDouble other && other.radix == radix && other.Value == Value;
@@ -282,8 +300,8 @@ namespace KdlDotNet
         public KDLNumberBigInteger(BigInteger value, int radix, string? type) : base(radix, type)
             => Value = value;
 
-        // TODO radix
-        public override string AsBasicString() => Value.ToString();
+        // TODO radix support for big integers
+        public override string AsBasicString(int radix = 10) => Value.ToString();
 
         public override bool Equals(object? obj)
             => obj is KDLNumberBigInteger other && other.radix == radix && other.Value == Value;
