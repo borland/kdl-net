@@ -5,6 +5,15 @@ This is a C# implementation of a parser for the [KDL Document Language](https://
 It is semi-literally ported from the Java KDL parser implementation [kdl4j](https://github.com/hkolbeck/kdl4j) by [Hannah Kolbeck](https://github.com/hkolbeck).
 Many thanks for the original implementation.
 
+## Status
+
+**The library is up to date as of the KDL 1.0.0. spec.** All testcases pass, except for scientific-notation numeric values outside the range representable by a `System.Double`, which KdlDotNet does not support at this time.
+
+The scope of the library is small and it has what I would consider excellent unit test coverage.
+
+I would be happy to use it in production in a constrained environment, such as loading configuration files, etc. It hasn't had proper performance benchmarking
+or profiling, so it is probably not suitable for use in a performance-critical codepath such as a tight loop.
+
 ## Platform
 
 The library is built against .NET Standard 2.0, which means it should work on the .NET Desktop framework 4.7.2 or later, and .NET Core 2.0 and later. The unit tests run against both .NET 4.7.2 and .NET Core 3.1 and all passs.
@@ -16,15 +25,6 @@ Install the [KdlDotNet Nuget package](https://www.nuget.org/packages/KdlDotNet),
 ## License
 
 KDL-net is licensed under the Creative Commons Attribution 4.0 License.
-
-## Status
-
-The scope of the library is small and it has what I would consider excellent unit test coverage.
-
-I would be happy to use it in production in a constrained environment, such as loading configuration files, etc. It hasn't had any proper performance benchmarking
-or profiling, so it is probably not suitable for use in a performance-critical codepath such as a tight loop.
-
-One Caveat: The KDL language spec itself is not final and may still yet change so I can't in all honesty say this is a production library. In my personal view, the spec looks pretty solid, and if it does change, I wouldn't expect it to do so in a major breaking way; rather I'd expect simple clarification of edge cases and bug-fixes. Hopefully nothing dramatic.
 
 ## Why KDL?
 
@@ -89,7 +89,7 @@ If you want to do something other than configure asp.net core applications, you'
 Add a nuget package reference to the [KdlDotNet](https://www.nuget.org/packages/KdlDotNet/) package
 
 ```xml
-<PackageReference Include="KdlDotNet" Version="1.0.0" />
+<PackageReference Include="KdlDotNet" Version="1.1.0" />
 ```
 
 Then create a new instance of `KdlDotNet.KDLParser` and call the `Parse` method, either on a `Stream` if you have one from a file/network, or from a `string`.  
@@ -113,8 +113,10 @@ kdl4j uses the java BigDecimal type as the internal representation for all numbe
 Presumably this was done for ease of implementation as it lets kdl4j have a simpler code path for handling numbers, 
 however BigDecimal is a large and complex thing, weighing in at a minimum of 32 bytes per instance (over and above the surrounding KDLNumber object).
 
-kdl-net in contrast uses an 8 byte storage structure, which is a union containing either an int32, int64, or double (8 byte floating point) value.
-This means kdl-net can't handle numbers that exceed the size of an int64 or double, however it should require a lot less memory and be faster.
-Given that the primary use-case for KDL at this stage seems to be human-readable configuration, this seems like a better tradeoff.
+KdlDotNet in contrast uses a hierarchy of classes derived from an abstract `KDLNumber` class, each of which uses different backing storage.
+When parsing KDL documents, KdlDotNet will attempt to use the smallest integer type in the series of `Int32`, `Int64`, `BigInteger`.
+All floating point or scientific-notation values are stored using `Double`.
+
+This means KdlDotNet should require a lot less memory and be faster when dealing with numeric values.
 
 **PULL REQUESTS APPRECIATED**
